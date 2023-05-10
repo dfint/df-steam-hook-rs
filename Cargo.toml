@@ -1,0 +1,26 @@
+[package]
+name = "hook"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "dfint_hook"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+macro = { path = "src/macro" }
+detour = { version = "^0.8.1", features = ["nightly"] }
+log = "0.4.17"
+simple-logging = "2.0.2"
+winapi = { version = "^0.3.9", features = [
+  "minwindef",
+  "winnt",
+  "libloaderapi",
+  "windef",
+] }
+encoding_rs = "*"
+encoding_rs_io = "*"
+regex = "*"
+toml = "0.7.3"
+lazy_static = "1.4.0"
