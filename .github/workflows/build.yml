@@ -19,7 +19,7 @@ jobs:
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toolchain: stable
+        toolchain: nightly-2022-11-06
 
     - uses: Swatinem/rust-cache@v2
     
