@@ -1,0 +1,27 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly-2022-11-06
+
+    - uses: Swatinem/rust-cache@v2
+    
+    - name: Build
+      run: cargo +nightly-2022-11-06 build --release
