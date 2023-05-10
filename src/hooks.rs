@@ -36,7 +36,7 @@ fn menu_interface_loop(a1: usize) {
 fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
     if size <= 1 {
-      return handle_string_copy_n.call(dst, src, size);
+      return original!(dst, src, size);
     }
     match CStr::from_bytes_with_nul_unchecked(slice::from_raw_parts(src, size + 1)).to_str() {
       Ok(value) => match DICTIONARY.get(value) {
