@@ -1,7 +1,11 @@
-use std::ffi::CStr;
-use std::slice;
-use std::str::Utf8Error;
+use std::ptr;
+use winapi::um::libloaderapi::GetModuleHandleW;
 
-pub unsafe fn cstr_from_bytes(src: *const u8, size: usize) -> Result<&'static str, Utf8Error> {
-  CStr::from_bytes_with_nul_unchecked(slice::from_raw_parts(src, size + 1)).to_str()
+lazy_static! {
+  static ref MODULE: usize = unsafe { GetModuleHandleW(ptr::null()) as usize };
+}
+
+#[allow(dead_code)]
+pub fn address(offset: usize) -> usize {
+  *MODULE + offset
 }

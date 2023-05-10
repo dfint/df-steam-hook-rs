@@ -7,7 +7,7 @@ use regex::Regex;
 pub fn attach(attr: TokenStream, input: TokenStream) -> TokenStream {
   let parsed = ParseFn::new(&input.clone().to_string().as_str());
   let attach = format!(
-    "pub unsafe fn attach_{}() -> Result<(), Box<dyn Error>> {{ let target = mem::transmute(address(CONFIG.offset.{})); handle_{}.initialize(target, {})?.enable()?; Ok(()) }}",
+    "pub unsafe fn attach_{}() -> Result<(), Box<dyn Error>> {{ let target = mem::transmute(utils::address(CONFIG.offset.{})); handle_{}.initialize(target, {})?.enable()?; Ok(()) }}",
     parsed.name, parsed.name, parsed.name, parsed.name
   );
   let mut return_type = String::from("");
