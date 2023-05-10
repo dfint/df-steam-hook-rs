@@ -3,8 +3,19 @@ name: Build
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - '.github/workflows/build.yml'
+
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - '.github/workflows/build.yml'
 
 env:
   CARGO_TERM_COLOR: always
