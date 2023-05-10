@@ -36,8 +36,7 @@ fn attach() -> Result<(), Box<dyn Error>> {
   simple_logging::log_to_file("test.log", LevelFilter::Trace)?;
   trace!("{:}", CONFIG.metadata.name);
   unsafe {
-    hooks::attach_menu_interface_loop()?;
-    hooks::attach_string_copy_n()?;
+    hooks::attach_all()?;
   }
   trace!("attached");
   Ok(())
