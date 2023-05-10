@@ -6,10 +6,6 @@ use regex::Regex;
 #[proc_macro_attribute]
 pub fn attach(attr: TokenStream, input: TokenStream) -> TokenStream {
   let parsed = ParseFn::new(&input.clone().to_string().as_str());
-  println!(
-    "name {:?}\nsig {:?}\nreturn {:?}\narg_type {:?}\narg_name {:?}",
-    parsed.name, parsed.sig, parsed.return_type, parsed.arg_type, parsed.arg_name
-  );
   let attach = format!(
     "pub unsafe fn attach_{}() -> Result<(), Box<dyn Error>> {{ let target = mem::transmute(address(CONFIG.offset.{})); handle_{}.initialize(target, {})?.enable()?; Ok(()) }}",
     parsed.name, parsed.name, parsed.name, parsed.name
@@ -29,17 +25,15 @@ pub fn attach(attr: TokenStream, input: TokenStream) -> TokenStream {
     "{}\n{}\n{}",
     static_detour.as_str(),
     input
-      .clone()
       .to_string()
       .replace("original!", format!("handle_{}.call", parsed.name).as_str()),
     attach.as_str()
   );
-
-  println!("{:}", result);
-
+  // println!("{:}", result);
   result.parse().unwrap()
 }
 
+#[allow(dead_code)]
 struct ParseFn {
   name: String,
   sig: String,

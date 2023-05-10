@@ -18,6 +18,7 @@ use crate::config::CONFIG;
 mod config;
 mod dictionary;
 mod hooks;
+mod utils;
 
 #[no_mangle]
 pub unsafe extern "system" fn DllMain(
