@@ -15,6 +15,7 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
   if CONFIG.settings.enable_translation {
     attach_string_copy_n()?;
     attach_string_append_n()?;
+    // attach_addst()?;
   }
   Ok(())
 }

@@ -29,7 +29,7 @@ pub fn attach(attr: TokenStream, input: TokenStream) -> TokenStream {
       .replace("original!", format!("handle_{}.call", parsed.name).as_str()),
     attach.as_str()
   );
-  // println!("{:}", result);
+  println!("{:}", result);
   result.parse().unwrap()
 }
 
@@ -61,10 +61,7 @@ impl ParseFn {
       None => "",
     };
     let mut arg_type = Vec::<String>::new();
-    for item in Regex::new(r"[a-zA-Z0-9_]+\s:\s([a-zA-Z0-9_\*\s&]+)")
-      .unwrap()
-      .captures_iter(value)
-    {
+    for item in Regex::new(r"[a-zA-Z0-9_]+\s:\s([a-z0-9_\*\s]+)").unwrap().captures_iter(value) {
       arg_type.push(String::from(item.get(1).unwrap().as_str()));
     }
     let mut arg_name = Vec::<String>::new();
