@@ -36,7 +36,6 @@ pub unsafe extern "system" fn DllMain(
 fn attach() -> Result<(), Box<dyn Error>> {
   simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace)?;
   trace!("{:}, {:x}", CONFIG.metadata.name, CONFIG.offset.checksum);
-
   unsafe {
     hooks::attach_all()?;
   }

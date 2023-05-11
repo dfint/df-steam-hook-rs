@@ -6,8 +6,6 @@ use exe::{VecPE, PE};
 use toml::{map::Map, Table, Value};
 use walkdir::WalkDir;
 
-use log::trace;
-
 static EXE_FILE: &str = "./Dwarf Fortress.exe";
 static CONFIG_FILE: &str = "./dfint_data/dfint_config.toml";
 static OFFSETS_DIR: &str = "./dfint_data/offsets/";
