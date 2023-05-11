@@ -51,10 +51,7 @@ impl ParseFn {
       .get(1)
       .unwrap()
       .as_str();
-    let sig = match Regex::new(r"fn\s[a-zA-Z0-9_]+\((.*)\)\s")
-      .unwrap()
-      .captures(value)
-    {
+    let sig = match Regex::new(r"fn\s[a-zA-Z0-9_]+\((.*)\)\s").unwrap().captures(value) {
       Some(item) => item.get(1).unwrap().as_str(),
       None => "",
     };

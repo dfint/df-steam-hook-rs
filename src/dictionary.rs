@@ -34,26 +34,16 @@ impl Dictionary {
 
   fn load(path: &str) -> Result<HashMap<String, Vec<u8>>, Box<dyn Error>> {
     let file = File::open(path)?;
-    let mut reader = DecodeReaderBytesBuilder::new()
-      .encoding(Some(WINDOWS_1251))
-      .build(file);
+    let mut reader = DecodeReaderBytesBuilder::new().encoding(Some(WINDOWS_1251)).build(file);
     let mut contents = String::new();
     reader.read_to_string(&mut contents)?;
-
     let mut map = HashMap::<String, Vec<u8>>::new();
-
     for item in Regex::new(r#""(.+)","(.+)""#)?.captures_iter(&contents) {
       map.insert(
         String::from(item.get(1).unwrap().as_str()),
-        Vec::from(
-          WINDOWS_1251
-            .encode(item.get(2).unwrap().as_str())
-            .0
-            .as_ref(),
-        ),
+        Vec::from(WINDOWS_1251.encode(item.get(2).unwrap().as_str()).0.as_ref()),
       );
     }
-
     Ok(map)
   }
 }

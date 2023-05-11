@@ -2,10 +2,11 @@ use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 
-use toml::Table;
+use toml::{map::Map, Table, Value};
 
 lazy_static! {
-  pub static ref CONFIG: Config = Config::new("./dfint_data/dfint_config.toml").unwrap();
+  static ref PATH_PREFIX: String = String::from("./dfint_data/");
+  pub static ref CONFIG: Config = Config::new(PATH_PREFIX.clone()).unwrap();
 }
 
 pub struct Config {
@@ -36,14 +37,10 @@ pub struct Offset {
 }
 
 impl Config {
-  pub fn new(path: &str) -> Result<Self, Box<dyn Error>> {
-    let mut file = File::open(path)?;
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-
-    let table = content.parse::<Table>()?;
-    let metadata = table["metadata"].as_table().unwrap();
-    let settings = table["settings"].as_table().unwrap();
+  pub fn new(path: String) -> Result<Self, Box<dyn Error>> {
+    let config = Self::read_toml(path + "dfint_config.toml")?;
+    let metadata = config["metadata"].as_table().unwrap();
+    let settings = config["settings"].as_table().unwrap();
 
     Ok(Self {
       metadata: Metadata {
@@ -65,5 +62,13 @@ impl Config {
         menu_interface_loop: 0x167890,
       },
     })
+  }
+
+  fn read_toml(filename: String) -> Result<Map<String, Value>, Box<dyn Error>> {
+    let mut file = File::open(filename)?;
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+    let result = content.parse::<Table>()?;
+    Ok(result)
   }
 }
