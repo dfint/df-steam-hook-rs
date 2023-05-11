@@ -1,41 +1,51 @@
-pub struct CxString {
-  data: CxBuf,
-  len: usize,
-  capa: usize,
-  pad: usize,
+#[repr(C)]
+pub struct CxxString {
+  data: CxxStringContent,
+  pub len: usize,
+  pub capa: usize,
+  pub pad: usize,
 }
 
-union CxBuf {
+union CxxStringContent {
   buf: [u8; 16],
   ptr: *mut u8,
 }
 
-impl CxString {
-  pub unsafe fn to_str(&mut self) -> String {
+impl CxxString {
+  pub unsafe fn new(bytes: *mut u8, size: usize) -> Self {
+    match size >= 16 {
+      true => Self {
+        data: CxxStringContent { ptr: bytes },
+        len: size,
+        capa: size,
+        pad: 47,
+      },
+      false => {
+        let b = std::slice::from_raw_parts(bytes, 16);
+        let p: *const [u8; 16] = b.as_ptr() as *const [u8; 16];
+        Self {
+          data: CxxStringContent {
+            buf: std::mem::transmute(*p),
+          },
+          len: size,
+          capa: 15,
+          pad: 47,
+        }
+      }
+    }
+  }
+
+  pub unsafe fn to_str(&mut self) -> Result<String, Box<dyn std::error::Error>> {
     let mut data: *const u8 = self.data.buf.as_ptr();
     if self.capa >= 16 {
       data = self.data.ptr;
     }
-
-    match CStr::from_bytes_with_nul(slice::from_raw_parts(data, self.len + 1)) {
+    match std::ffi::CStr::from_bytes_with_nul(std::slice::from_raw_parts(data, self.len + 1)) {
       Ok(value) => match value.to_str() {
-        Ok(value) => String::from(value),
-        Err(err) => err.to_string(),
+        Ok(value) => Ok(String::from(value)),
+        Err(_err) => Err("fail to form string".into()),
       },
-      Err(err) => err.to_string(),
-    }
-  }
-
-  pub unsafe fn write_byte(&mut self, bytes: *const u8, size: usize) {
-    self.len = size;
-    if size >= 16 {
-      self.capa = size;
-      std::ptr::copy(bytes, self.data.ptr, size);
-    } else {
-      let mut a = [0; 16];
-      std::ptr::copy(bytes, a.as_mut_ptr(), size);
-      std::ptr::copy(a.as_ptr(), self.data.buf.as_mut_ptr(), size);
-      self.capa = 15;
+      Err(_err) => Err("fail to form string".into()),
     }
   }
 

@@ -44,14 +44,14 @@ struct ParseFn {
 
 impl ParseFn {
   pub fn new(value: &str) -> Self {
-    let name = Regex::new(r"fn\s([a-zA-Z0-9_]+)\(")
+    let name = Regex::new(r"fn\s([\w_]+)\(")
       .unwrap()
       .captures(value)
       .unwrap()
       .get(1)
       .unwrap()
       .as_str();
-    let sig = match Regex::new(r"fn\s[a-zA-Z0-9_]+\((.*)\)\s").unwrap().captures(value) {
+    let sig = match Regex::new(r"fn\s[\w_]+\((.*)\)\s").unwrap().captures(value) {
       Some(item) => item.get(1).unwrap().as_str(),
       None => "",
     };
@@ -61,14 +61,11 @@ impl ParseFn {
       None => "",
     };
     let mut arg_type = Vec::<String>::new();
-    for item in Regex::new(r"[a-zA-Z0-9_]+\s:\s([a-z0-9_\*\s]+)").unwrap().captures_iter(value) {
+    for item in Regex::new(r"[\w_]+\s:\s([\w_\*\s&']+)").unwrap().captures_iter(sig) {
       arg_type.push(String::from(item.get(1).unwrap().as_str()));
     }
     let mut arg_name = Vec::<String>::new();
-    for item in Regex::new(r"([a-zA-Z0-9_]+)\s:\s[a-zA-Z0-9_\*\s&]+")
-      .unwrap()
-      .captures_iter(sig)
-    {
+    for item in Regex::new(r"([\w_]+)\s:\s[\w_\*\s&]+").unwrap().captures_iter(sig) {
       arg_name.push(String::from(item.get(1).unwrap().as_str()));
     }
 

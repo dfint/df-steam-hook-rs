@@ -16,6 +16,7 @@ use winapi::um::winnt::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
 use crate::config::CONFIG;
 
 mod config;
+mod cxxstring;
 mod dictionary;
 mod hooks;
 mod utils;
