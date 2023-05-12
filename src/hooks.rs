@@ -22,15 +22,12 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
 #[attach(cdecl)]
 fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
-    if size <= 1 {
-      return original!(dst, src, size);
-    }
-    match utils::cstr(src, size + 1) {
-      Ok(value) => match DICTIONARY.get(value) {
+    match (utils::cstr(src, size + 1), size > 1) {
+      (Ok(value), true) => match DICTIONARY.get(value) {
         Some(translate) => original!(dst, translate.as_ptr(), translate.len()),
         _ => original!(dst, src, size),
       },
-      _ => original!(dst, src, size),
+      (_, _) => original!(dst, src, size),
     }
   }
 }
@@ -38,15 +35,12 @@ fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
 #[attach(cdecl)]
 fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
-    if size <= 1 {
-      return original!(dst, src, size);
-    }
-    match utils::cstr(src, size + 1) {
-      Ok(value) => match DICTIONARY.get(value) {
+    match (utils::cstr(src, size + 1), size > 1) {
+      (Ok(value), true) => match DICTIONARY.get(value) {
         Some(translate) => original!(dst, translate.as_ptr(), translate.len()),
         _ => original!(dst, src, size),
       },
-      _ => original!(dst, src, size),
+      (_, _) => original!(dst, src, size),
     }
   }
 }
