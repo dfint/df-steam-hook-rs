@@ -35,6 +35,7 @@ pub unsafe fn message_box(message: &str, caption: &str, icon: MessageIconType) {
   );
 }
 
+#[allow(dead_code)]
 pub unsafe fn cstr(src: *const u8, size: usize) -> Result<&'static str, std::str::Utf8Error> {
   std::ffi::CStr::from_bytes_with_nul_unchecked(std::slice::from_raw_parts(src, size)).to_str()
 }

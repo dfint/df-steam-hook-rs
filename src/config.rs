@@ -6,6 +6,8 @@ use exe::{VecPE, PE};
 use toml::{map::Map, Table, Value};
 use walkdir::WalkDir;
 
+use crate::utils;
+
 static EXE_FILE: &str = "./Dwarf Fortress.exe";
 static CONFIG_FILE: &str = "./dfint_data/dfint_config.toml";
 static OFFSETS_DIR: &str = "./dfint_data/offsets/";
@@ -42,6 +44,7 @@ pub struct Settings {
 }
 
 pub struct Offset {
+  pub version: String,
   pub checksum: u32,
   pub string_copy: usize,
   pub string_copy_n: usize,
@@ -83,7 +86,7 @@ impl Config {
         settings: main_config.settings,
         offset: offsets,
       }),
-      Err(_) => Err("Config Error".into()), // rework to WinMessageBox
+      Err(_) => Err("Config Error".into()),
     }
   }
 
@@ -113,7 +116,19 @@ impl Config {
       }
     }
 
-    Err("Unable to find offsets file".into())
+    unsafe {
+      utils::message_box(
+        format!(
+          "unable to find offsets file for current version of DF\nchecksum: 0x{:x}",
+          target_timestamp
+        )
+        .as_str(),
+        "dfint hook error",
+        utils::MessageIconType::Error,
+      );
+    }
+    std::process::exit(2);
+    // Err("Unable to find offsets file".into())
   }
 
   fn parse_config(path: &Path) -> Result<MainConfig, Box<dyn Error>> {
@@ -143,6 +158,7 @@ impl Config {
     let metadata = root["metadata"].as_table().unwrap();
     let offsets = root["offsets"].as_table().unwrap();
     Ok(Offset {
+      version: String::from(metadata["version"].as_str().unwrap_or("none")),
       checksum: u32::try_from(metadata["checksum"].as_integer().unwrap())?,
       string_copy: usize::try_from(offsets["string_copy"].as_integer().unwrap())?,
       string_copy_n: usize::try_from(offsets["string_copy_n"].as_integer().unwrap())?,

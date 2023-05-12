@@ -1,21 +1,16 @@
 #[macro_use(lazy_static)]
 extern crate lazy_static;
 
-use log::trace;
 use log::LevelFilter;
-// // use detour::static_detour;
+use log::{error, info, trace};
 use std::error::Error;
-// use std::fs::File;
-// use std::{ffi::CString, iter, mem};
-// use winapi::ctypes::{c_int, c_void};
 use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID, TRUE};
-// use winapi::shared::windef::HWND;
-// use winapi::um::libloaderapi::{GetModuleHandleW, GetProcAddress};
 use winapi::um::winnt::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
 
 use crate::config::CONFIG;
 
 mod config;
+mod crash;
 mod cxxstring;
 mod dictionary;
 mod hooks;
@@ -27,6 +22,7 @@ pub unsafe extern "system" fn DllMain(
   call_reason: DWORD,
   _reserved: LPVOID,
 ) -> BOOL {
+  crash::install();
   match call_reason {
     DLL_PROCESS_ATTACH => attach().is_ok() as BOOL,
     DLL_PROCESS_DETACH => detach().is_ok() as BOOL,
@@ -36,15 +32,27 @@ pub unsafe extern "system" fn DllMain(
 
 fn attach() -> Result<(), Box<dyn Error>> {
   simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace)?;
-  trace!("{:}, {:x}", CONFIG.metadata.name, CONFIG.offset.checksum);
+  if CONFIG.metadata.name != "dfint localization hook" {
+    error!("unable to find config file");
+    unsafe {
+      utils::message_box(
+        "unable to find config file",
+        "dfint hook error",
+        utils::MessageIconType::Error,
+      );
+    }
+    std::process::exit(2);
+  }
+  info!("pe checksum: 0x{:x}", CONFIG.offset.checksum);
+  info!("offsets version: {}", CONFIG.offset.version);
   unsafe {
     hooks::attach_all()?;
   }
-  trace!("attached");
+  trace!("hooks attached");
   Ok(())
 }
 
 fn detach() -> Result<(), Box<dyn Error>> {
-  trace!("detached");
+  trace!("hooks detached");
   Ok(())
 }
