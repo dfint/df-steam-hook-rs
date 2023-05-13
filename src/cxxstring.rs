@@ -79,7 +79,7 @@ impl IndexMut<usize> for CxxString {
         data = self.data.ptr;
       }
       let target = data as usize + index;
-      let mut slice = std::slice::from_raw_parts_mut(target as *mut u8, self.len);
+      let mut slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
       &mut slice[0]
     }
   }

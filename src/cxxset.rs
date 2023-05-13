@@ -23,9 +23,6 @@ impl<T: std::cmp::PartialOrd + std::fmt::Display> CxxSet<T> {
 
   pub unsafe fn contains(&self, key: T) -> bool {
     let mut current = &*(&*self.head).parent;
-    if current.is_nil {
-      return false;
-    }
     while !current.is_nil {
       if current.key == key {
         return true;
