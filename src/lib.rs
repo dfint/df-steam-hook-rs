@@ -11,6 +11,7 @@ use crate::config::CONFIG;
 
 mod config;
 mod crash;
+mod cxxset;
 mod cxxstring;
 mod dictionary;
 mod hooks;

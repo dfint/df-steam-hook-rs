@@ -1,13 +1,12 @@
 use backtrace;
 use chrono::prelude::*;
 use log::error;
-use winapi::um::errhandlingapi::SetUnhandledExceptionFilter;
-use winapi::um::minwinbase as ErrorCode;
-use winapi::um::winnt::{EXCEPTION_POINTERS, LONG};
-
 use std::fs::File;
 use std::io::Write;
 use std::writeln;
+use winapi::um::errhandlingapi::SetUnhandledExceptionFilter;
+use winapi::um::minwinbase as ErrorCode;
+use winapi::um::winnt::{EXCEPTION_POINTERS, LONG};
 
 use crate::config::CONFIG;
 use crate::utils;

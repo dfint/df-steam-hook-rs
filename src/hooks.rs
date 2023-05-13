@@ -4,11 +4,14 @@ use std::mem;
 use std::os::raw::c_char;
 
 use crate::config::CONFIG;
+use crate::cxxset::CxxSet;
 use crate::cxxstring::CxxString;
 use crate::dictionary::DICTIONARY;
 use crate::utils;
 
 use r#macro::attach;
+
+use log::trace;
 
 pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
   if CONFIG.settings.enable_translation {
@@ -17,6 +20,8 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
     attach_addst()?;
     attach_addst_top()?;
     attach_addst_flag()?;
+
+    attach_standardstringentry()?;
   }
   Ok(())
 }
@@ -50,7 +55,7 @@ fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char
 #[attach(fastcall)]
 fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
-    let s: &mut CxxString = std::mem::transmute(src);
+    let s = CxxString::from_ptr(src);
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
@@ -67,7 +72,7 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
 #[attach(fastcall)]
 fn addst_top(gps: usize, src: *const u8, a3: usize) {
   unsafe {
-    let s: &mut CxxString = std::mem::transmute(src);
+    let s = CxxString::from_ptr(src);
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
@@ -84,7 +89,7 @@ fn addst_top(gps: usize, src: *const u8, a3: usize) {
 #[attach(fastcall)]
 fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
-    let s: &mut CxxString = std::mem::transmute(src);
+    let s = CxxString::from_ptr(src);
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
@@ -95,5 +100,14 @@ fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
       },
       _ => original!(gps, src, a3, a4, flag),
     }
+  }
+}
+
+#[attach(fastcall)]
+fn standardstringentry(src: *const u8, maxlen: i32, flag: u32, events: *const u8) -> i32 {
+  unsafe {
+    let e = CxxSet::<i32>::from_ptr(events);
+    trace!("enter! {} {:?}", e.size, e.contains(457));
+    original!(src, maxlen, flag, events)
   }
 }

@@ -1,6 +1,7 @@
+use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
-use std::{error::Error, path::Path};
+use std::path::Path;
 
 use exe::{VecPE, PE};
 use toml::{map::Map, Table, Value};

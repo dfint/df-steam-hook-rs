@@ -29,7 +29,7 @@ pub fn attach(attr: TokenStream, input: TokenStream) -> TokenStream {
       .replace("original!", format!("handle_{}.call", parsed.name).as_str()),
     attach.as_str()
   );
-  println!("{:}", result);
+  // println!("{:}", result);
   result.parse().unwrap()
 }
 
@@ -44,28 +44,28 @@ struct ParseFn {
 
 impl ParseFn {
   pub fn new(value: &str) -> Self {
-    let name = Regex::new(r"fn\s([\w_]+)\(")
+    let s = String::from(value.clone()).replace("\n", " ");
+    let name = Regex::new(r"fn\s([\w]+)\(")
       .unwrap()
       .captures(value)
       .unwrap()
       .get(1)
       .unwrap()
       .as_str();
-    let sig = match Regex::new(r"fn\s[\w_]+\((.*)\)\s").unwrap().captures(value) {
+    let sig = match Regex::new(r"fn\s*[\w]+\((.*?)\)").unwrap().captures(s.as_str()) {
       Some(item) => item.get(1).unwrap().as_str(),
       None => "",
     };
-    let s = String::from(value.clone()).replace("\n", " ");
     let return_type = match Regex::new(r"->\s(.*?)\s\{").unwrap().captures(s.as_str()) {
       Some(item) => item.get(1).unwrap().as_str(),
       None => "",
     };
     let mut arg_type = Vec::<String>::new();
-    for item in Regex::new(r"[\w_]+\s:\s([\w_\*\s&']+)").unwrap().captures_iter(sig) {
+    for item in Regex::new(r"[\w]+\s:\s([\w\*\s&']+)").unwrap().captures_iter(sig) {
       arg_type.push(String::from(item.get(1).unwrap().as_str()));
     }
     let mut arg_name = Vec::<String>::new();
-    for item in Regex::new(r"([\w_]+)\s:\s[\w_\*\s&]+").unwrap().captures_iter(sig) {
+    for item in Regex::new(r"([\w]+)\s:\s[\w\*\s&]+").unwrap().captures_iter(sig) {
       arg_name.push(String::from(item.get(1).unwrap().as_str()));
     }
 

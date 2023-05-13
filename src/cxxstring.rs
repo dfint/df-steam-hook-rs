@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 #[repr(C)]
 pub struct CxxString {
   data: CxxStringContent,
@@ -30,6 +32,10 @@ impl CxxString {
     }
   }
 
+  pub unsafe fn from_ptr(ptr: *const u8) -> &'static mut Self {
+    std::mem::transmute(ptr)
+  }
+
   pub unsafe fn to_str(&mut self) -> Result<&'static str, Box<dyn std::error::Error>> {
     let mut data: *const u8 = self.data.buf.as_ptr();
     if self.capa >= 16 {
@@ -46,5 +52,35 @@ impl CxxString {
 
   pub unsafe fn as_ptr(&mut self) -> *const u8 {
     std::mem::transmute(self)
+  }
+}
+
+impl Index<usize> for CxxString {
+  type Output = u8;
+
+  fn index(&self, index: usize) -> &Self::Output {
+    unsafe {
+      let mut data: *const u8 = self.data.buf.as_ptr();
+      if self.capa >= 16 {
+        data = self.data.ptr;
+      }
+      let target = data as usize + index;
+      let slice = std::slice::from_raw_parts(target as *const u8, 1);
+      &slice[0]
+    }
+  }
+}
+
+impl IndexMut<usize> for CxxString {
+  fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+    unsafe {
+      let mut data: *mut u8 = self.data.buf.as_mut_ptr();
+      if self.capa >= 16 {
+        data = self.data.ptr;
+      }
+      let target = data as usize + index;
+      let mut slice = std::slice::from_raw_parts_mut(target as *mut u8, self.len);
+      &mut slice[0]
+    }
   }
 }
