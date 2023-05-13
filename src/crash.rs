@@ -43,13 +43,24 @@ pub unsafe extern "system" fn handler(exception_info: *mut EXCEPTION_POINTERS) -
     CONFIG.settings.crash_report_dir, cr_filename
   ))
   .unwrap();
-  writeln!(&mut file, "Version: {}", CONFIG.offset.version).unwrap();
-  writeln!(&mut file, "Cheksum: {:x}", CONFIG.offset.checksum).unwrap();
-  writeln!(&mut file, "Error: {}", code_to_str(record.ExceptionCode)).unwrap();
-  writeln!(&mut file, "Address: {:?}", record.ExceptionAddress).unwrap();
-  writeln!(&mut file, "------------STACK------------").unwrap();
-  writeln!(&mut file, "{}", stack).unwrap();
-  writeln!(&mut file, "-----------------------------").unwrap();
+  writeln!(
+    &mut file,
+    "-----------------------------
+Version: {}
+Cheksum: {:x}
+Error: {}
+Address: {:?}
+------------STACK------------
+{}
+------------STACK------------",
+    CONFIG.offset.version,
+    CONFIG.offset.checksum,
+    code_to_str(record.ExceptionCode),
+    record.ExceptionAddress,
+    stack
+  )
+  .unwrap();
+
   error!(
     "crash occured, error {}, address {:?}, crashlog {}",
     code_to_str(record.ExceptionCode),
