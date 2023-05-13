@@ -5,21 +5,22 @@ pub struct CxxString {
   pub capa: usize,
 }
 
+#[repr(C)]
 union CxxStringContent {
   buf: [u8; 16],
   ptr: *mut u8,
 }
 
 impl CxxString {
-  pub unsafe fn new(bytes: *mut u8, size: usize) -> Self {
+  pub unsafe fn new(ptr: *mut u8, size: usize) -> Self {
     if size >= 16 {
       return Self {
-        data: CxxStringContent { ptr: bytes },
+        data: CxxStringContent { ptr },
         len: size,
         capa: size,
       };
     }
-    let array_ptr: *const [u8; 16] = bytes as *const [u8; 16];
+    let array_ptr: *const [u8; 16] = ptr as *const [u8; 16];
     Self {
       data: CxxStringContent {
         buf: std::mem::transmute(*array_ptr),
@@ -37,9 +38,9 @@ impl CxxString {
     match std::ffi::CStr::from_bytes_with_nul(std::slice::from_raw_parts(data, self.len + 1)) {
       Ok(value) => match value.to_str() {
         Ok(value) => Ok(value),
-        Err(_err) => Err("fail to form string".into()),
+        Err(err) => Err(err.into()),
       },
-      Err(_err) => Err("fail to form string".into()),
+      Err(err) => Err(err.into()),
     }
   }
 

@@ -15,6 +15,8 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
     attach_string_copy_n()?;
     attach_string_append_n()?;
     attach_addst()?;
+    attach_addst_top()?;
+    attach_addst_flag()?;
   }
   Ok(())
 }
@@ -52,12 +54,46 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
-          let mut cxxs = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
-          original!(gps, cxxs.as_ptr(), justify, space)
+          let mut cxxstr = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
+          original!(gps, cxxstr.as_ptr(), justify, space)
         }
         _ => original!(gps, src, justify, space),
       },
       _ => original!(gps, src, justify, space),
+    }
+  }
+}
+
+#[attach(fastcall)]
+fn addst_top(gps: usize, src: *const u8, a3: usize) {
+  unsafe {
+    let s: &mut CxxString = std::mem::transmute(src);
+    match s.to_str() {
+      Ok(converted) => match DICTIONARY.get(converted) {
+        Some(translate) => {
+          let mut cxxstr = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
+          original!(gps, cxxstr.as_ptr(), a3)
+        }
+        _ => original!(gps, src, a3),
+      },
+      _ => original!(gps, src, a3),
+    }
+  }
+}
+
+#[attach(fastcall)]
+fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
+  unsafe {
+    let s: &mut CxxString = std::mem::transmute(src);
+    match s.to_str() {
+      Ok(converted) => match DICTIONARY.get(converted) {
+        Some(translate) => {
+          let mut cxxstr = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
+          original!(gps, cxxstr.as_ptr(), a3, a4, flag)
+        }
+        _ => original!(gps, src, a3, a4, flag),
+      },
+      _ => original!(gps, src, a3, a4, flag),
     }
   }
 }
