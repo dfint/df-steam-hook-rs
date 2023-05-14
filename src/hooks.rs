@@ -20,8 +20,14 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
     attach_addst()?;
     attach_addst_top()?;
     attach_addst_flag()?;
-
+  }
+  if CONFIG.settings.enable_search {
     attach_standardstringentry()?;
+    attach_simplify_string()?;
+    attach_upper_case_string()?;
+    attach_lower_case_string()?;
+    attach_capitalize_string_words()?;
+    attach_capitalize_string_first_word()?;
   }
   Ok(())
 }
@@ -103,11 +109,234 @@ fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   }
 }
 
+// #[repr(u8)]
+// enum StringEntry {
+//   Letters = 1,
+//   Space = 2,
+//   Numbers = 4,
+//   Caps = 8,
+//   Symbols = 16,
+// }
+
+#[non_exhaustive]
+struct StringEntry;
+
+impl StringEntry {
+  pub const LETTERS: u8 = 1;
+  pub const SPACE: u8 = 2;
+  pub const NUMBERS: u8 = 4;
+  pub const CAPS: u8 = 8;
+  pub const SYMBOLS: u8 = 16;
+}
+
 #[attach(fastcall)]
-fn standardstringentry(src: *const u8, maxlen: i32, flag: u32, events: *const u8) -> i32 {
+fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const u8) -> i32 {
   unsafe {
-    let e = CxxSet::<i32>::from_ptr(events);
-    trace!("enter! {} {:?}", e.size, e.contains(457));
-    original!(src, maxlen, flag, events)
+    let content = CxxString::from_ptr(src);
+    let events = CxxSet::<u32>::from_ptr(events_ptr);
+    let shift = CONFIG.offset.keybinding;
+    let mut entry = shift + 1;
+    let mut ranges = vec![shift..=shift];
+
+    if (flag & StringEntry::SYMBOLS) > 0 {
+      ranges.push(shift..=(shift + 255));
+    }
+    if (flag & StringEntry::LETTERS) > 0 {
+      ranges.push((shift + 65)..=(shift + 90));
+      ranges.push((shift + 97)..=(shift + 122));
+      ranges.push((shift + 192)..=(shift + 255));
+    }
+    if (flag & StringEntry::SPACE) > 0 {
+      ranges.push((shift + 32)..=(shift + 32));
+    }
+    if (flag & StringEntry::NUMBERS) > 0 {
+      ranges.push((shift + 48)..=(shift + 57));
+    }
+
+    'outer: for range in ranges.into_iter() {
+      'inner: for item in range.into_iter() {
+        if events.contains(item) {
+          entry = item;
+          if item > shift + 192 && item <= shift + 255 {
+            entry += 1;
+          }
+          break 'outer;
+        }
+      }
+    }
+
+    trace!("entry: {:?}", entry);
+    trace!(
+      "str buf {:x}, ptr {:x}",
+      content.data.buf.as_ptr() as usize,
+      content.data.ptr as usize
+    );
+
+    // original!(src, maxlen, flag, events_ptr);
+
+    match entry - shift {
+      1 => return 0,
+      0 => {
+        if content.len > 0 {
+          content.resize(content.len - 1);
+        }
+      }
+      value => {
+        let mut cursor = content.len;
+        if cursor >= maxlen as usize {
+          cursor = (maxlen - 1) as usize;
+        }
+        if cursor < 0 {
+          cursor = 0;
+        }
+        if content.len < cursor + 1 {
+          content.resize(cursor + 1);
+        }
+        let letter = match flag & StringEntry::CAPS > 0 {
+          true => capitalize(value as u8),
+          false => value as u8,
+        };
+        content[cursor] = letter;
+      }
+    }
+    events.clear();
+    1
+  }
+}
+
+fn capitalize(symbol: u8) -> u8 {
+  match symbol {
+    symbol if symbol >= 97 && symbol <= 122 => symbol - 32, // latin
+    symbol if symbol >= 224 => symbol - 32,                 // cyrillic
+    symbol if symbol == 184 => 168,                         // cyrillic ё
+    _ => symbol,
+  }
+}
+
+fn lowercast(symbol: u8) -> u8 {
+  match symbol {
+    symbol if symbol >= 65 && symbol <= 90 => symbol + 32, // latin
+    symbol if symbol >= 192 && symbol <= 223 => symbol + 32, // cyrillic
+    symbol if symbol == 168 => 184,                        // cyrillic ё
+    _ => symbol,
+  }
+}
+
+#[attach(fastcall)]
+fn simplify_string(src: *const u8) {
+  unsafe {
+    let mut content = CxxString::from_ptr(src);
+    for i in 0..content.len {
+      content[i] = match lowercast(content[i]) {
+        129 | 150 | 151 | 154 | 163 => 117,
+        152 => 121,
+        164 | 165 => 110,
+        131..=134 | 142 | 143 | 145 | 146 | 160 => 97,
+        130 | 136..=138 | 144 => 101,
+        139..=141 | 161 => 105,
+        147..=149 | 153 | 162 => 111,
+        128 | 135 => 99,
+        value => value,
+      };
+    }
+  }
+}
+
+#[attach(fastcall)]
+fn upper_case_string(src: *const u8) {
+  unsafe {
+    let mut content = CxxString::from_ptr(src);
+    for i in 0..content.len {
+      content[i] = match capitalize(content[i]) {
+        129 => 154,
+        164 => 165,
+        132 => 142,
+        134 => 143,
+        130 => 144,
+        148 => 153,
+        135 => 128,
+        145 => 146,
+        value => value,
+      };
+    }
+  }
+}
+
+#[attach(fastcall)]
+fn lower_case_string(src: *const u8) {
+  unsafe {
+    let mut content = CxxString::from_ptr(src);
+    for i in 0..content.len {
+      content[i] = match lowercast(content[i]) {
+        154 => 129,
+        165 => 164,
+        142 => 132,
+        143 => 134,
+        144 => 130,
+        153 => 148,
+        128 => 135,
+        146 => 145,
+        value => value,
+      };
+    }
+  }
+}
+
+#[attach(fastcall)]
+fn capitalize_string_words(src: *const u8) {
+  unsafe {
+    let mut content = CxxString::from_ptr(src);
+    for i in 0..content.len {
+      let mut conf = false;
+      if (i > 0 && content[i - 1] == 32 || content[i - 1] == 34)
+        || (i >= 2 && content[i - 1] == 39 && (content[i - 2] == 32 || content[i - 2] == 44))
+      {
+        conf = true;
+      }
+      if i == 0 || conf {
+        content[i] = match capitalize(content[i]) {
+          129 => 154,
+          164 => 165,
+          132 => 142,
+          134 => 143,
+          130 => 144,
+          148 => 153,
+          135 => 128,
+          145 => 146,
+          value => value,
+        };
+      }
+    }
+  }
+}
+
+#[attach(fastcall)]
+fn capitalize_string_first_word(src: *const u8) {
+  unsafe {
+    let mut content = CxxString::from_ptr(src);
+    for i in 0..content.len {
+      let mut conf = false;
+      if (i > 0 && content[i - 1] == 32 || content[i - 1] == 34)
+        || (i >= 2 && content[i - 1] == 39 && (content[i - 2] == 32 || content[i - 2] == 44))
+      {
+        conf = true;
+      }
+      if i == 0 || conf {
+        content[i] = match capitalize(content[i]) {
+          129 => 154,
+          164 => 165,
+          132 => 142,
+          134 => 143,
+          130 => 144,
+          148 => 153,
+          135 => 128,
+          145 => 146,
+          value => value,
+        };
+        if content[i] != 32 && content[i] != 34 {
+          return;
+        }
+      }
+    }
   }
 }

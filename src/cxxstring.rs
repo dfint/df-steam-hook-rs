@@ -1,16 +1,17 @@
+use std::alloc::{realloc, Layout};
 use std::ops::{Index, IndexMut};
 
 #[repr(C)]
 pub struct CxxString {
-  data: CxxStringContent,
+  pub data: CxxStringContent,
   pub len: usize,
   pub capa: usize,
 }
 
 #[repr(C)]
-union CxxStringContent {
-  buf: [u8; 16],
-  ptr: *mut u8,
+pub union CxxStringContent {
+  pub buf: [u8; 16],
+  pub ptr: *mut u8,
 }
 
 impl CxxString {
@@ -29,6 +30,34 @@ impl CxxString {
       },
       len: size,
       capa: 15,
+    }
+  }
+
+  pub unsafe fn resize(&mut self, size: usize) {
+    if size > self.len {
+      self.len = size;
+      if size >= 16 {
+        if self.capa < 16 {
+          log::trace!("{:?}", self.data.buf);
+          self.data.ptr = realloc(self.data.buf.as_mut_ptr(), Layout::new::<u8>(), size + 16);
+          self.capa = size + 16;
+          self.capa = size + 16;
+        } else if self.capa < size {
+          let mut v = Vec::<u8>::from_raw_parts(self.data.ptr, self.capa, size + 32);
+          self.data.ptr = v.as_mut_ptr();
+          self.capa = size + 32;
+        }
+      }
+    } else {
+      self.len = size;
+      if size >= 16 {
+        self.capa = size;
+        let target = self.data.ptr as usize + size;
+        let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
+        slice[0] = 0;
+      } else {
+        self.data.buf[size] = 0;
+      }
     }
   }
 
@@ -79,7 +108,7 @@ impl IndexMut<usize> for CxxString {
         data = self.data.ptr;
       }
       let target = data as usize + index;
-      let mut slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
+      let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
       &mut slice[0]
     }
   }

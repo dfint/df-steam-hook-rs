@@ -1,4 +1,4 @@
-use log::trace;
+use std::alloc::{dealloc, Layout};
 
 #[repr(C)]
 pub struct CxxSet<T> {
@@ -33,5 +33,24 @@ impl<T: std::cmp::PartialOrd + std::fmt::Display> CxxSet<T> {
       };
     }
     false
+  }
+
+  pub unsafe fn clear(&mut self) {
+    let current = (&*self.head).parent;
+    self.dealloc_subtree(current);
+    (&mut *self.head).parent = self.head;
+    (&mut *self.head).left = self.head;
+    (&mut *self.head).right = self.head;
+    self.size = 0;
+  }
+
+  unsafe fn dealloc_subtree(&mut self, node: *mut CxxSetNode<T>) {
+    let mut current = node;
+    while !(&*current).is_nil {
+      self.dealloc_subtree((&*current).right);
+      let to_destroy = current;
+      current = (&*current).left;
+      dealloc(to_destroy as *mut u8, Layout::new::<CxxSetNode<T>>());
+    }
   }
 }
