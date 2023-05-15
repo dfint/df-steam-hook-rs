@@ -1,4 +1,4 @@
-use std::alloc::{realloc, Layout};
+use std::alloc::{alloc_zeroed, realloc, Layout};
 use std::ops::{Index, IndexMut};
 
 #[repr(C)]
@@ -35,23 +35,25 @@ impl CxxString {
 
   pub unsafe fn resize(&mut self, size: usize) {
     if size > self.len {
-      self.len = size;
-      if size >= 16 {
-        if self.capa < 16 {
-          log::trace!("{:?}", self.data.buf);
-          self.data.ptr = realloc(self.data.buf.as_mut_ptr(), Layout::new::<u8>(), size + 16);
-          self.capa = size + 16;
-          self.capa = size + 16;
-        } else if self.capa < size {
-          let mut v = Vec::<u8>::from_raw_parts(self.data.ptr, self.capa, size + 32);
-          self.data.ptr = v.as_mut_ptr();
-          self.capa = size + 32;
+      match (size >= 16, self.capa) {
+        (true, v) if v == 15 => {
+          let new_array = alloc_zeroed(Layout::array::<u8>(32).unwrap());
+          std::ptr::copy_nonoverlapping(self.data.buf.as_ptr(), new_array, 16);
+          self.data.ptr = new_array;
+          self.capa = 32;
         }
+        (true, v) if v < size => {
+          self.data.ptr = realloc(
+            self.data.ptr,
+            Layout::array::<u8>(self.capa).unwrap(),
+            self.capa + 16,
+          );
+          self.capa += 16;
+        }
+        (_, _) => (),
       }
     } else {
-      self.len = size;
-      if size >= 16 {
-        self.capa = size;
+      if self.capa >= 16 {
         let target = self.data.ptr as usize + size;
         let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
         slice[0] = 0;
@@ -59,6 +61,7 @@ impl CxxString {
         self.data.buf[size] = 0;
       }
     }
+    self.len = size;
   }
 
   pub unsafe fn from_ptr(ptr: *const u8) -> &'static mut Self {

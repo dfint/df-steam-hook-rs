@@ -11,8 +11,6 @@ use crate::utils;
 
 use r#macro::attach;
 
-use log::trace;
-
 pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
   if CONFIG.settings.enable_translation {
     attach_string_copy_n()?;
@@ -109,15 +107,6 @@ fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   }
 }
 
-// #[repr(u8)]
-// enum StringEntry {
-//   Letters = 1,
-//   Space = 2,
-//   Numbers = 4,
-//   Caps = 8,
-//   Symbols = 16,
-// }
-
 #[non_exhaustive]
 struct StringEntry;
 
@@ -164,15 +153,6 @@ fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const
         }
       }
     }
-
-    trace!("entry: {:?}", entry);
-    trace!(
-      "str buf {:x}, ptr {:x}",
-      content.data.buf.as_ptr() as usize,
-      content.data.ptr as usize
-    );
-
-    // original!(src, maxlen, flag, events_ptr);
 
     match entry - shift {
       1 => return 0,
