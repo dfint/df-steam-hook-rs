@@ -1,13 +1,8 @@
 #[macro_use(lazy_static)]
 extern crate lazy_static;
-
-use log::LevelFilter;
-use log::{error, info, trace};
-use std::error::Error;
-use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID, TRUE};
-use winapi::um::winnt::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
-
-use crate::config::CONFIG;
+#[macro_use]
+extern crate serde_derive;
+extern crate toml;
 
 mod config;
 mod crash;
@@ -16,6 +11,14 @@ mod cxxstring;
 mod dictionary;
 mod hooks;
 mod utils;
+
+use log::LevelFilter;
+use log::{error, info, trace};
+use std::error::Error;
+use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID, TRUE};
+use winapi::um::winnt::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
+
+use crate::config::CONFIG;
 
 #[no_mangle]
 pub unsafe extern "system" fn DllMain(
@@ -44,8 +47,8 @@ fn attach() -> Result<(), Box<dyn Error>> {
     }
     std::process::exit(2);
   }
-  info!("pe checksum: 0x{:x}", CONFIG.offset.checksum);
-  info!("offsets version: {}", CONFIG.offset.version);
+  info!("pe checksum: 0x{:x}", CONFIG.offset_metadata.checksum);
+  info!("offsets version: {}", CONFIG.offset_metadata.version);
   unsafe {
     hooks::attach_all()?;
   }

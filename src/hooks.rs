@@ -123,7 +123,7 @@ fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const
   unsafe {
     let content = CxxString::from_ptr(src);
     let events = CxxSet::<u32>::from_ptr(events_ptr);
-    let shift = CONFIG.offset.keybinding;
+    let shift = CONFIG.offset.keybinding.unwrap_or(0);
     let mut entry = shift + 1;
     let mut ranges = vec![shift..=shift];
 

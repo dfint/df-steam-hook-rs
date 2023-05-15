@@ -52,8 +52,8 @@ Address: {:?}
 ------------STACK------------
 {}
 ------------STACK------------",
-    CONFIG.offset.version,
-    CONFIG.offset.checksum,
+    CONFIG.offset_metadata.version,
+    CONFIG.offset_metadata.checksum,
     code_to_str(record.ExceptionCode),
     record.ExceptionAddress,
     stack
