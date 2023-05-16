@@ -49,6 +49,7 @@ fn attach() -> Result<(), Box<dyn Error>> {
   }
   info!("pe checksum: 0x{:x}", CONFIG.offset_metadata.checksum);
   info!("offsets version: {}", CONFIG.offset_metadata.version);
+  info!("hook version: {}", CONFIG.hook_version);
   unsafe {
     hooks::attach_all()?;
   }

@@ -19,6 +19,7 @@ pub struct Config {
   pub settings: Settings,
   pub offset: OffsetsValues,
   pub offset_metadata: OffsetsMetadata,
+  pub hook_version: String,
 }
 
 #[derive(Deserialize)]
@@ -101,6 +102,10 @@ impl Config {
         settings: main_config.settings,
         offset: offsets.offsets,
         offset_metadata: offsets.metadata,
+        hook_version: match option_env!("HOOK_VERSION") {
+          Some(version) => String::from(version),
+          None => String::from("not-defined"),
+        },
       }),
       Err(_) => Err("Config Error".into()),
     }

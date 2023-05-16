@@ -47,6 +47,7 @@ pub unsafe extern "system" fn handler(exception_info: *mut EXCEPTION_POINTERS) -
     "-----------------------------
 Version: {}
 Cheksum: {:x}
+Hook version: {}
 Error: {}
 Address: {:?}
 ------------STACK------------
@@ -54,6 +55,7 @@ Address: {:?}
 ------------STACK------------",
     CONFIG.offset_metadata.version,
     CONFIG.offset_metadata.checksum,
+    CONFIG.hook_version,
     code_to_str(record.ExceptionCode),
     record.ExceptionAddress,
     stack
