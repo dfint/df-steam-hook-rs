@@ -95,7 +95,7 @@ pub struct OffsetsValues {
 impl Config {
   pub fn new() -> Result<Self, Box<dyn Error>> {
     let pe_timestamp = Self::pe_timestamp(Path::new(EXE_FILE))?;
-    let main_config = Self::parse_config(Path::new(CONFIG_FILE))?;
+    let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE))?;
     match Self::walk_offsets(Path::new(OFFSETS_DIR), pe_timestamp) {
       Ok(offsets) => Ok(Self {
         metadata: main_config.metadata,
@@ -123,7 +123,7 @@ impl Config {
       if !pentry.is_file() {
         continue;
       }
-      let offsets = Self::parse_offsets(pentry)?;
+      let offsets = Self::parse_toml::<Offsets>(pentry)?;
       if offsets.metadata.checksum == target_timestamp {
         return Ok(offsets);
       }
@@ -144,15 +144,9 @@ impl Config {
     // Err("Unable to find offsets file".into())
   }
 
-  fn parse_config(path: &Path) -> Result<MainConfig, Box<dyn Error>> {
+  fn parse_toml<T: for<'de> serde::Deserialize<'de>>(path: &Path) -> Result<T, Box<dyn Error>> {
     let content = std::fs::read_to_string(path)?;
-    let main_config: MainConfig = toml::from_str(content.as_str())?;
-    Ok(main_config)
-  }
-
-  fn parse_offsets(path: &Path) -> Result<Offsets, Box<dyn Error>> {
-    let content = std::fs::read_to_string(path)?;
-    let offsets: Offsets = toml::from_str(content.as_str())?;
-    Ok(offsets)
+    let data: T = toml::from_str(content.as_str())?;
+    Ok(data)
   }
 }
