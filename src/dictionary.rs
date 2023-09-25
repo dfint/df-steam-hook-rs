@@ -6,12 +6,12 @@ use std::io::prelude::*;
 use encoding_rs::WINDOWS_1251;
 use encoding_rs_io::DecodeReaderBytesBuilder;
 use regex::Regex;
+use static_init::dynamic;
 
 use crate::config::CONFIG;
 
-lazy_static! {
-  pub static ref DICTIONARY: Dictionary = Dictionary::new(&CONFIG.settings.dictionary);
-}
+#[dynamic]
+pub static DICTIONARY: Dictionary = Dictionary::new(&CONFIG.settings.dictionary);
 
 pub struct Dictionary {
   map: HashMap<String, Vec<u8>>,

@@ -1,18 +1,21 @@
 use std::error::Error;
 use std::path::Path;
 
-use exe::{VecPE, PE};
-use walkdir::WalkDir;
-
 use crate::utils;
+use exe::{VecPE, PE};
+use static_init::dynamic;
+use walkdir::WalkDir;
 
 static EXE_FILE: &str = "./Dwarf Fortress.exe";
 static CONFIG_FILE: &str = "./dfint_data/dfint_config.toml";
 static OFFSETS_DIR: &str = "./dfint_data/offsets/";
 
-lazy_static! {
-  pub static ref CONFIG: Config = Config::new().unwrap();
-}
+#[dynamic]
+pub static CONFIG: Config = Config::new().unwrap();
+
+// lazy_static! {
+//   pub static ref CONFIG: Config = Config::new().unwrap();
+// }
 
 pub struct Config {
   pub metadata: ConfigMetadata,

@@ -1,10 +1,10 @@
+use static_init::dynamic;
 use std::ptr;
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::winuser::MessageBoxW;
 
-lazy_static! {
-  static ref MODULE: usize = unsafe { GetModuleHandleW(ptr::null()) as usize };
-}
+#[dynamic]
+static MODULE: usize = unsafe { GetModuleHandleW(ptr::null()) as usize };
 
 #[allow(dead_code)]
 pub fn address(offset: usize) -> usize {

@@ -1,5 +1,3 @@
-#[macro_use(lazy_static)]
-extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 extern crate toml;
@@ -14,28 +12,17 @@ mod utils;
 
 use log::LevelFilter;
 use log::{error, info, trace};
-use std::error::Error;
-use winapi::shared::minwindef::{BOOL, DWORD, HINSTANCE, LPVOID, TRUE};
-use winapi::um::winnt::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
+use static_init::{constructor, destructor};
 
 use crate::config::CONFIG;
 
+#[constructor]
 #[no_mangle]
-pub unsafe extern "system" fn DllMain(
-  _module: HINSTANCE,
-  call_reason: DWORD,
-  _reserved: LPVOID,
-) -> BOOL {
-  crash::install();
-  match call_reason {
-    DLL_PROCESS_ATTACH => attach().is_ok() as BOOL,
-    DLL_PROCESS_DETACH => detach().is_ok() as BOOL,
-    _ => TRUE,
+extern "C" fn attach() {
+  unsafe {
+    crash::install();
   }
-}
-
-fn attach() -> Result<(), Box<dyn Error>> {
-  simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace)?;
+  simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace).unwrap();
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");
     unsafe {
@@ -51,13 +38,13 @@ fn attach() -> Result<(), Box<dyn Error>> {
   info!("offsets version: {}", CONFIG.offset_metadata.version);
   info!("hook version: {}", CONFIG.hook_version);
   unsafe {
-    hooks::attach_all()?;
+    hooks::attach_all().unwrap();
   }
   trace!("hooks attached");
-  Ok(())
 }
 
-fn detach() -> Result<(), Box<dyn Error>> {
+#[destructor]
+#[no_mangle]
+extern "C" fn detach() {
   trace!("hooks detached");
-  Ok(())
 }
