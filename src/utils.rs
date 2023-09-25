@@ -1,10 +1,8 @@
-use static_init::dynamic;
-use std::ptr;
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::winuser::MessageBoxW;
 
-#[dynamic]
-static MODULE: usize = unsafe { GetModuleHandleW(ptr::null()) as usize };
+#[static_init::dynamic]
+static MODULE: usize = unsafe { GetModuleHandleW(std::ptr::null()) as usize };
 
 #[allow(dead_code)]
 pub fn address(offset: usize) -> usize {
@@ -28,7 +26,7 @@ pub unsafe fn message_box(message: &str, caption: &str, icon: MessageIconType) {
   let mut caption_vec: Vec<u16> = caption.collect();
   caption_vec.push(0);
   MessageBoxW(
-    ptr::null_mut(),
+    std::ptr::null_mut(),
     message_vec.as_ptr(),
     caption_vec.as_ptr(),
     icon as u32,

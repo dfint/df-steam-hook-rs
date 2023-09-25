@@ -1,16 +1,13 @@
 use std::collections::HashMap;
-use std::error::Error;
-use std::fs::File;
 use std::io::prelude::*;
 
 use encoding_rs::WINDOWS_1251;
 use encoding_rs_io::DecodeReaderBytesBuilder;
 use regex::Regex;
-use static_init::dynamic;
 
 use crate::config::CONFIG;
 
-#[dynamic]
+#[static_init::dynamic]
 pub static DICTIONARY: Dictionary = Dictionary::new(&CONFIG.settings.dictionary);
 
 pub struct Dictionary {
@@ -32,8 +29,8 @@ impl Dictionary {
     self.map.capacity()
   }
 
-  fn load(path: &str) -> Result<HashMap<String, Vec<u8>>, Box<dyn Error>> {
-    let file = File::open(path)?;
+  fn load(path: &str) -> Result<HashMap<String, Vec<u8>>, Box<dyn std::error::Error>> {
+    let file = std::fs::File::open(path)?;
     let mut reader = DecodeReaderBytesBuilder::new().encoding(Some(WINDOWS_1251)).build(file);
     let mut contents = String::new();
     reader.read_to_string(&mut contents)?;

@@ -1,4 +1,4 @@
-use detour::static_detour;
+use retour::static_detour;
 use std::error::Error;
 use std::mem;
 use std::os::raw::c_char;
@@ -9,7 +9,7 @@ use crate::cxxstring::CxxString;
 use crate::dictionary::DICTIONARY;
 use crate::utils;
 
-use r#macro::attach;
+use r#macro::hook;
 
 pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
   if CONFIG.settings.enable_translation {
@@ -30,8 +30,8 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
-#[attach(cdecl)]
-fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+#[hook]
+extern "cdecl" fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
     match (utils::cstr(src, size + 1), size > 1) {
       (Ok(value), true) => match DICTIONARY.get(value) {
@@ -43,8 +43,8 @@ fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   }
 }
 
-#[attach(cdecl)]
-fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+#[hook]
+extern "cdecl" fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
     match (utils::cstr(src, size + 1), size > 1) {
       (Ok(value), true) => match DICTIONARY.get(value) {
@@ -56,8 +56,8 @@ fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char
   }
 }
 
-#[attach(fastcall)]
-fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
+#[hook]
+extern "fastcall" fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -73,8 +73,8 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   }
 }
 
-#[attach(fastcall)]
-fn addst_top(gps: usize, src: *const u8, a3: usize) {
+#[hook]
+extern "fastcall" fn addst_top(gps: usize, src: *const u8, a3: usize) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -90,8 +90,8 @@ fn addst_top(gps: usize, src: *const u8, a3: usize) {
   }
 }
 
-#[attach(fastcall)]
-fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
+#[hook]
+extern "fastcall" fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -118,8 +118,8 @@ impl StringEntry {
   pub const SYMBOLS: u8 = 16;
 }
 
-#[attach(fastcall)]
-fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const u8) -> i32 {
+#[hook]
+extern "fastcall" fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const u8) -> i32 {
   unsafe {
     let content = CxxString::from_ptr(src);
     let events = CxxSet::<u32>::from_ptr(events_ptr);
@@ -195,15 +195,15 @@ fn capitalize(symbol: u8) -> u8 {
 
 fn lowercast(symbol: u8) -> u8 {
   match symbol {
-    symbol if symbol >= 65 && symbol <= 90 => symbol + 32, // latin
+    symbol if symbol >= 65 && symbol <= 90 => symbol + 32,   // latin
     symbol if symbol >= 192 && symbol <= 223 => symbol + 32, // cyrillic
-    symbol if symbol == 168 => 184,                        // cyrillic ё
+    symbol if symbol == 168 => 184,                          // cyrillic ё
     _ => symbol,
   }
 }
 
-#[attach(fastcall)]
-fn simplify_string(src: *const u8) {
+#[hook]
+extern "fastcall" fn simplify_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -222,8 +222,8 @@ fn simplify_string(src: *const u8) {
   }
 }
 
-#[attach(fastcall)]
-fn upper_case_string(src: *const u8) {
+#[hook]
+extern "fastcall" fn upper_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -242,8 +242,8 @@ fn upper_case_string(src: *const u8) {
   }
 }
 
-#[attach(fastcall)]
-fn lower_case_string(src: *const u8) {
+#[hook]
+extern "fastcall" fn lower_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -262,8 +262,8 @@ fn lower_case_string(src: *const u8) {
   }
 }
 
-#[attach(fastcall)]
-fn capitalize_string_words(src: *const u8) {
+#[hook]
+extern "fastcall" fn capitalize_string_words(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -290,8 +290,8 @@ fn capitalize_string_words(src: *const u8) {
   }
 }
 
-#[attach(fastcall)]
-fn capitalize_string_first_word(src: *const u8) {
+#[hook]
+extern "fastcall" fn capitalize_string_first_word(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {

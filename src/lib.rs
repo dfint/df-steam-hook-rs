@@ -12,11 +12,10 @@ mod utils;
 
 use log::LevelFilter;
 use log::{error, info, trace};
-use static_init::{constructor, destructor};
 
 use crate::config::CONFIG;
 
-#[constructor]
+#[static_init::constructor]
 #[no_mangle]
 extern "C" fn attach() {
   unsafe {
@@ -43,7 +42,7 @@ extern "C" fn attach() {
   trace!("hooks attached");
 }
 
-#[destructor]
+#[static_init::destructor]
 #[no_mangle]
 extern "C" fn detach() {
   trace!("hooks detached");

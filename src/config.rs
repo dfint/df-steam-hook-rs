@@ -4,7 +4,6 @@ use std::path::Path;
 use crate::utils;
 use exe::{VecPE, PE};
 use static_init::dynamic;
-use walkdir::WalkDir;
 
 static EXE_FILE: &str = "./Dwarf Fortress.exe";
 static CONFIG_FILE: &str = "./dfint_data/dfint_config.toml";
@@ -13,9 +12,6 @@ static OFFSETS_DIR: &str = "./dfint_data/offsets/";
 #[dynamic]
 pub static CONFIG: Config = Config::new().unwrap();
 
-// lazy_static! {
-//   pub static ref CONFIG: Config = Config::new().unwrap();
-// }
 
 pub struct Config {
   pub metadata: ConfigMetadata,
@@ -120,13 +116,13 @@ impl Config {
   }
 
   fn walk_offsets(path: &Path, target_timestamp: u32) -> Result<Offsets, Box<dyn Error>> {
-    for entry in WalkDir::new(path).min_depth(1).max_depth(1) {
-      let entry = entry.unwrap();
+    for entry in std::fs::read_dir(path)? {
+      let entry = entry?;
       let pentry = entry.path();
       if !pentry.is_file() {
         continue;
       }
-      let offsets = Self::parse_toml::<Offsets>(pentry)?;
+      let offsets = Self::parse_toml::<Offsets>(&pentry)?;
       if offsets.metadata.checksum == target_timestamp {
         return Ok(offsets);
       }
