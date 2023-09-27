@@ -1,6 +1,101 @@
 use std::alloc::{alloc_zeroed, realloc, Layout};
 use std::ops::{Index, IndexMut};
 
+#[cfg(target_os = "linux")]
+#[repr(C)]
+pub struct CxxString {
+  pub ptr: *mut u8,
+  pub len: usize,
+  pub sso: CxxSSO,
+}
+
+#[cfg(target_os = "linux")]
+#[repr(C)]
+pub union CxxSSO {
+  pub capa: usize,
+  pub buf: [u8; 16],
+}
+
+#[cfg(target_os = "linux")]
+impl CxxString {
+  pub unsafe fn new(ptr: *mut u8, size: usize) -> Self {
+    if size >= 16 {
+      return Self {
+        ptr: ptr,
+        len: size,
+        sso: CxxSSO { capa: size },
+      };
+    }
+    let array_ptr: *const [u8; 16] = ptr as *const [u8; 16];
+    Self {
+      ptr: ptr,
+      len: size,
+      sso: CxxSSO {
+        buf: std::mem::transmute(*array_ptr),
+      },
+    }
+  }
+
+  pub unsafe fn resize(&mut self, size: usize) {
+    // TODO: implement resize for gcc
+  }
+
+  pub unsafe fn from_ptr(ptr: *const u8) -> &'static mut Self {
+    std::mem::transmute(ptr)
+  }
+
+  pub unsafe fn as_ptr(&mut self) -> *const u8 {
+    std::mem::transmute(self)
+  }
+
+  pub unsafe fn as_mut_ptr(&mut self) -> *mut u8 {
+    std::mem::transmute(self)
+  }
+
+  pub unsafe fn to_str(&mut self) -> Result<&'static str, Box<dyn std::error::Error>> {
+    match std::ffi::CStr::from_bytes_with_nul(std::slice::from_raw_parts(self.ptr, self.len + 1)) {
+      Ok(value) => match value.to_str() {
+        Ok(value) => Ok(value),
+        Err(err) => Err(err.into()),
+      },
+      Err(err) => Err(err.into()),
+    }
+  }
+}
+
+#[cfg(target_os = "linux")]
+impl Index<usize> for CxxString {
+  type Output = u8;
+
+  fn index(&self, index: usize) -> &Self::Output {
+    unsafe {
+      let mut data: *const u8 = self.sso.buf.as_ptr();
+      if self.len >= 16 {
+        data = self.ptr;
+      }
+      let target = data as usize + index;
+      let slice = std::slice::from_raw_parts(target as *const u8, 1);
+      &slice[0]
+    }
+  }
+}
+
+#[cfg(target_os = "linux")]
+impl IndexMut<usize> for CxxString {
+  fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+    unsafe {
+      let mut data: *mut u8 = self.sso.buf.as_mut_ptr();
+      if self.len >= 16 {
+        data = self.ptr;
+      }
+      let target = data as usize + index;
+      let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
+      &mut slice[0]
+    }
+  }
+}
+
+#[cfg(target_os = "windows")]
 #[repr(C)]
 pub struct CxxString {
   pub data: CxxStringContent,
@@ -8,12 +103,14 @@ pub struct CxxString {
   pub capa: usize,
 }
 
+#[cfg(target_os = "windows")]
 #[repr(C)]
 pub union CxxStringContent {
   pub buf: [u8; 16],
   pub ptr: *mut u8,
 }
 
+#[cfg(target_os = "windows")]
 impl CxxString {
   pub unsafe fn new(ptr: *mut u8, size: usize) -> Self {
     if size >= 16 {
@@ -43,11 +140,7 @@ impl CxxString {
           self.capa = 32;
         }
         (true, v) if v < size => {
-          self.data.ptr = realloc(
-            self.data.ptr,
-            Layout::array::<u8>(self.capa).unwrap(),
-            self.capa + 16,
-          );
+          self.data.ptr = realloc(self.data.ptr, Layout::array::<u8>(self.capa).unwrap(), self.capa + 16);
           self.capa += 16;
         }
         (_, _) => (),
@@ -85,8 +178,13 @@ impl CxxString {
   pub unsafe fn as_ptr(&mut self) -> *const u8 {
     std::mem::transmute(self)
   }
+
+  pub unsafe fn as_mut_ptr(&mut self) -> *mut u8 {
+    std::mem::transmute(self)
+  }
 }
 
+#[cfg(target_os = "windows")]
 impl Index<usize> for CxxString {
   type Output = u8;
 
@@ -103,6 +201,7 @@ impl Index<usize> for CxxString {
   }
 }
 
+#[cfg(target_os = "windows")]
 impl IndexMut<usize> for CxxString {
   fn index_mut(&mut self, index: usize) -> &mut Self::Output {
     unsafe {

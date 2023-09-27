@@ -2,16 +2,18 @@ use std::error::Error;
 use std::path::Path;
 
 use crate::utils;
-use exe::{VecPE, PE};
-use static_init::dynamic;
 
-static EXE_FILE: &str = "./Dwarf Fortress.exe";
-static CONFIG_FILE: &str = "./dfint_data/dfint_config.toml";
-static OFFSETS_DIR: &str = "./dfint_data/offsets/";
+#[cfg(target_os = "windows")]
+const EXE_FILE: &'static str = "./Dwarf Fortress.exe";
 
-#[dynamic]
+#[cfg(target_os = "linux")]
+const EXE_FILE: &'static str = "./dwarfort";
+
+const CONFIG_FILE: &'static str = "./dfint_data/dfint_config.toml";
+const OFFSETS_DIR: &'static str = "./dfint_data/offsets/";
+
+#[static_init::dynamic]
 pub static CONFIG: Config = Config::new().unwrap();
-
 
 pub struct Config {
   pub metadata: ConfigMetadata,
@@ -93,9 +95,9 @@ pub struct OffsetsValues {
 
 impl Config {
   pub fn new() -> Result<Self, Box<dyn Error>> {
-    let pe_timestamp = Self::pe_timestamp(Path::new(EXE_FILE))?;
+    let checksum = Self::checksum(Path::new(EXE_FILE))?;
     let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE))?;
-    match Self::walk_offsets(Path::new(OFFSETS_DIR), pe_timestamp) {
+    match Self::walk_offsets(Path::new(OFFSETS_DIR), checksum) {
       Ok(offsets) => Ok(Self {
         metadata: main_config.metadata,
         settings: main_config.settings,
@@ -110,12 +112,23 @@ impl Config {
     }
   }
 
-  fn pe_timestamp(path: &Path) -> Result<u32, Box<dyn Error>> {
+  #[cfg(target_os = "windows")]
+  fn checksum(path: &Path) -> Result<u32, Box<dyn Error>> {
+    use exe::{VecPE, PE};
     let pefile = VecPE::from_disk_file(path)?;
     Ok(pefile.get_nt_headers_64()?.file_header.time_date_stamp)
   }
 
-  fn walk_offsets(path: &Path, target_timestamp: u32) -> Result<Offsets, Box<dyn Error>> {
+  #[cfg(target_os = "linux")]
+  fn checksum(path: &Path) -> Result<u32, Box<dyn Error>> {
+    let mut crc = checksum::crc::Crc::new(path.to_str().unwrap());
+    match crc.checksum() {
+      Ok(checksum) => Ok(checksum.crc32),
+      Err(_e) => Err("Checksum error".into()),
+    }
+  }
+
+  fn walk_offsets(path: &Path, target_checksum: u32) -> Result<Offsets, Box<dyn Error>> {
     for entry in std::fs::read_dir(path)? {
       let entry = entry?;
       let pentry = entry.path();
@@ -123,22 +136,21 @@ impl Config {
         continue;
       }
       let offsets = Self::parse_toml::<Offsets>(&pentry)?;
-      if offsets.metadata.checksum == target_timestamp {
+      if offsets.metadata.checksum == target_checksum {
         return Ok(offsets);
       }
     }
 
-    unsafe {
-      utils::message_box(
-        format!(
-          "unable to find offsets file for current version of DF\nchecksum: 0x{:x}",
-          target_timestamp
-        )
-        .as_str(),
-        "dfint hook error",
-        utils::MessageIconType::Error,
-      );
-    }
+    utils::message_box(
+      format!(
+        "unable to find offsets file for current version of DF\nchecksum: 0x{:x}",
+        target_checksum
+      )
+      .as_str(),
+      "dfint hook error",
+      utils::MessageIconType::Error,
+    );
+
     std::process::exit(2);
     // Err("Unable to find offsets file".into())
   }
