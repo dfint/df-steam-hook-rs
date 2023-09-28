@@ -61,6 +61,13 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
     let attach_ident = format_ident!("attach_{}", ident);
     let detach_ident = format_ident!("detach_{}", ident);
     let handle_ident = format_ident!("handle_{}", ident);
+    let ret_type = quote!(#output).to_string();
+    let inputs_unnamed = quote!(#inputs)
+      .to_string()
+      .split(",")
+      .map(|arg| arg.split(":").collect::<Vec<&str>>()[1])
+      .collect::<Vec<&str>>()
+      .join(",");
 
     let mut attach = quote!(
       pub unsafe fn #attach_ident() -> Result<(), Box<dyn Error>> {
@@ -79,8 +86,8 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       attach = attach.replace(
         "target()",
         format!(
-          "mem::transmute(utils::symbol_handle::<fn()>({}, {}))",
-          args.module, args.symbol
+          "utils::symbol_handle::<fn({}) {}>({}, {})",
+          inputs_unnamed, ret_type, args.module, args.symbol
         )
         .as_str(),
       );
@@ -100,7 +107,7 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       .to_string();
     }
 
-    let output = quote!(
+    let result = quote!(
       pub unsafe fn #detach_ident() -> Result<(), Box<dyn Error>> {
         #handle_ident.disable()?;
         Ok(())
@@ -109,16 +116,10 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       #vis #unsafety #constness fn #ident(#inputs) #output #block
     );
 
-    let inputs_unnamed = format!("{}", quote!(#inputs))
-      .split(",")
-      .map(|arg| arg.split(":").collect::<Vec<&str>>()[1])
-      .collect::<Vec<&str>>()
-      .join(",");
-
     return format!(
       "{}\n{}",
       attach.to_string(),
-      output
+      result
         .to_string()
         .replace("original!", format!("handle_{}.call", ident.to_string()).as_str())
         .replace("fn()", format!("fn({})", inputs_unnamed).as_str())

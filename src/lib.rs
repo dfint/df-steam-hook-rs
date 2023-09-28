@@ -47,7 +47,9 @@ extern "C" fn attach() {
 #[no_mangle]
 extern "C" fn detach() {
   unsafe {
-    hooks::detach_all().unwrap();
+    match hooks::detach_all() {
+      _ => (),
+    };
   }
   trace!("hooks detached");
 }

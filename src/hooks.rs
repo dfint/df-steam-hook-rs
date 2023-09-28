@@ -27,6 +27,8 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
     attach_capitalize_string_words()?;
     attach_capitalize_string_first_word()?;
   }
+  // attach_string_copy()?;
+  // attach_string_append()?;
   Ok(())
 }
 
@@ -49,9 +51,45 @@ pub unsafe fn detach_all() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+#[cfg_attr(target_os = "windows", hook(bypass))]
+#[cfg_attr(target_os = "linux", hook(module = "libc.so.6", symbol = "__strcpy_chk"))]
+fn string_copy(dst: *mut c_char, src: *mut u8) -> *const c_char {
+  unsafe {
+    let len = libc::strnlen(src as *const c_char, 1000);
+    match (std::ffi::CStr::from_ptr(src as *const c_char).to_str(), len > 1) {
+      (Ok(value), true) => match DICTIONARY.get(value) {
+        Some(translate) => {
+          let (ptr, _, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr)
+        }
+        _ => original!(dst, src),
+      },
+      (_, _) => original!(dst, src),
+    }
+  }
+}
+
+#[cfg_attr(target_os = "windows", hook(bypass))]
+#[cfg_attr(target_os = "linux", hook(module = "libc.so.6", symbol = "__strcat_chk"))]
+fn string_append(dst: *mut c_char, src: *mut u8) -> *const c_char {
+  unsafe {
+    let len = libc::strnlen(src as *const c_char, 1000);
+    match (std::ffi::CStr::from_ptr(src as *const c_char).to_str(), len > 1) {
+      (Ok(value), true) => match DICTIONARY.get(value) {
+        Some(translate) => {
+          let (ptr, _, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr)
+        }
+        _ => original!(dst, src),
+      },
+      (_, _) => original!(dst, src),
+    }
+  }
+}
+
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "cdecl" fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
     match (utils::cstr(src, size + 1), size > 1) {
       (Ok(value), true) => match DICTIONARY.get(value) {
@@ -65,7 +103,7 @@ extern "cdecl" fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "cdecl" fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
     match (utils::cstr(src, size + 1), size > 1) {
       (Ok(value), true) => match DICTIONARY.get(value) {
@@ -85,7 +123,7 @@ extern "cdecl" fn string_append_n(dst: *mut c_char, src: *const u8, size: usize)
     symbol = "_ZN9graphicst5addstERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE13justificationi"
   )
 )]
-extern "fastcall" fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
+fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -116,7 +154,7 @@ extern "fastcall" fn addst(gps: usize, src: *const u8, justify: u8, space: u32) 
     symbol = "_ZN9graphicst9top_addstERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE13justificationi"
   )
 )]
-extern "fastcall" fn addst_top(gps: usize, src: *const u8, a3: usize) {
+fn addst_top(gps: usize, src: *const u8, a3: usize) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -124,6 +162,12 @@ extern "fastcall" fn addst_top(gps: usize, src: *const u8, a3: usize) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
           let mut cxxstr = CxxString::new(ptr, len);
+          #[cfg(target_os = "linux")]
+          {
+            if cxxstr.len < 16 {
+              cxxstr.ptr = cxxstr.sso.buf.as_mut_ptr();
+            }
+          }
           original!(gps, cxxstr.as_ptr(), a3)
         }
         _ => original!(gps, src, a3),
@@ -141,7 +185,7 @@ extern "fastcall" fn addst_top(gps: usize, src: *const u8, a3: usize) {
     symbol = "_ZN9graphicst10addst_flagERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE13justificationij"
   )
 )]
-extern "fastcall" fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
+fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -149,6 +193,12 @@ extern "fastcall" fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
           let mut cxxstr = CxxString::new(ptr, len);
+          #[cfg(target_os = "linux")]
+          {
+            if cxxstr.len < 16 {
+              cxxstr.ptr = cxxstr.sso.buf.as_mut_ptr();
+            }
+          }
           original!(gps, cxxstr.as_ptr(), a3, a4, flag)
         }
         _ => original!(gps, src, a3, a4, flag),
@@ -171,7 +221,7 @@ impl StringEntry {
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "fastcall" fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const u8) -> i32 {
+fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const u8) -> i32 {
   unsafe {
     let content = CxxString::from_ptr(src);
     let events = CxxSet::<u32>::from_ptr(events_ptr);
@@ -256,7 +306,7 @@ fn lowercast(symbol: u8) -> u8 {
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "fastcall" fn simplify_string(src: *const u8) {
+fn simplify_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -277,7 +327,7 @@ extern "fastcall" fn simplify_string(src: *const u8) {
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "fastcall" fn upper_case_string(src: *const u8) {
+fn upper_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -298,7 +348,7 @@ extern "fastcall" fn upper_case_string(src: *const u8) {
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "fastcall" fn lower_case_string(src: *const u8) {
+fn lower_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -319,7 +369,7 @@ extern "fastcall" fn lower_case_string(src: *const u8) {
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "fastcall" fn capitalize_string_words(src: *const u8) {
+fn capitalize_string_words(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -348,7 +398,7 @@ extern "fastcall" fn capitalize_string_words(src: *const u8) {
 
 #[cfg_attr(target_os = "windows", hook)]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-extern "fastcall" fn capitalize_string_first_word(src: *const u8) {
+fn capitalize_string_first_word(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
