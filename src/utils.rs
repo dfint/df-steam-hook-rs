@@ -11,7 +11,7 @@ static MODULE: usize = unsafe { winapi::um::libloaderapi::GetModuleHandleW(std::
 
 #[cfg(target_os = "linux")]
 #[static_init::dynamic]
-static MODULE: usize = unsafe { libc::dlopen(std::ptr::null(), libc::RTLD_NOW | libc::RTLD_LOCAL) as usize };
+static MODULE: usize = unsafe { libc::dlopen(std::ptr::null(), libc::RTLD_NOW) as usize };
 
 #[static_init::dynamic]
 static SDL_MESSAGE_BOX: fn(u32, *const i8, *const i8, *const u8) -> i32 =

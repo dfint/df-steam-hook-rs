@@ -9,6 +9,7 @@ struct Args {
   offset: usize,
   module: String,
   symbol: String,
+  bypass: bool,
 }
 
 impl Args {
@@ -16,16 +17,23 @@ impl Args {
     let mut offset = 0;
     let mut module = String::from("");
     let mut symbol = String::from("");
+    let mut bypass = false;
     for arg_pair in args.to_string().split(",") {
       let arg = arg_pair.split("=").collect::<Vec<&str>>();
       match arg[0].trim() {
         "offset" => offset = arg[1].trim().replace("\"", "").parse::<usize>().unwrap(),
         "module" => module = String::from(arg[1].trim()),
         "symbol" => symbol = String::from(arg[1].trim()),
+        "bypass" => bypass = true,
         _ => (),
       }
     }
-    Self { offset, module, symbol }
+    Self {
+      offset,
+      module,
+      symbol,
+      bypass,
+    }
   }
 }
 
@@ -81,6 +89,15 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
         "target()",
         format!("mem::transmute(utils::address(CONFIG.offset.{}))", ident.to_string()).as_str(),
       );
+    }
+
+    if args.bypass {
+      attach = quote!(
+        pub unsafe fn #attach_ident() -> Result<(), Box<dyn Error>> {
+          Ok(())
+        }
+      )
+      .to_string();
     }
 
     let output = quote!(

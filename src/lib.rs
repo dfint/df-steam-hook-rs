@@ -20,6 +20,7 @@ use crate::config::CONFIG;
 #[static_init::constructor]
 #[no_mangle]
 extern "C" fn attach() {
+  std::env::set_var("RUST_BACKTRACE", "1");
   // unsafe {
   //   crash::install();
   // }
@@ -45,8 +46,8 @@ extern "C" fn attach() {
 #[static_init::destructor]
 #[no_mangle]
 extern "C" fn detach() {
-  // unsafe {
-  //   hooks::detach_all().unwrap();
-  // }
+  unsafe {
+    hooks::detach_all().unwrap();
+  }
   trace!("hooks detached");
 }
