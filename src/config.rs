@@ -63,6 +63,7 @@ pub struct OffsetsMetadata {
 #[derive(Deserialize)]
 pub struct OffsetsValues {
   pub enabler: Option<usize>,
+  pub utf_input: Option<usize>,
   pub string_copy_n: Option<usize>,
   pub string_append: Option<usize>,
   pub string_append_n: Option<usize>,
@@ -136,7 +137,6 @@ impl Config {
     );
 
     std::process::exit(2);
-    // Err("Unable to find offsets file".into())
   }
 
   fn parse_toml<T: for<'de> serde::Deserialize<'de>>(path: &Path) -> Result<T, Box<dyn Error>> {

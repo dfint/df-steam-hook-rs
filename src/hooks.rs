@@ -220,7 +220,10 @@ fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *con
     let utf_a = std::slice::from_raw_parts_mut(utf as *mut u32, 8);
     #[cfg(target_os = "linux")]
     {
-      let utf_a = std::slice::from_raw_parts_mut((&CONFIG.offset.enabler.unwrap() + 0x38d) as *mut u32, 8);
+      let utf_a = std::slice::from_raw_parts_mut(
+        (&CONFIG.offset.enabler.unwrap() + &CONFIG.offset.utf_input.unwrap()) as *mut u32,
+        8,
+      );
     }
 
     for i in 0..8 {
