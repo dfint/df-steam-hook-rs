@@ -10,6 +10,7 @@ struct Args {
   module: String,
   symbol: String,
   bypass: bool,
+  without_base: bool,
 }
 
 impl Args {
@@ -18,13 +19,15 @@ impl Args {
     let mut module = String::from("");
     let mut symbol = String::from("");
     let mut bypass = false;
+    let mut without_base = false;
     for arg_pair in args.to_string().split(",") {
       let arg = arg_pair.split("=").collect::<Vec<&str>>();
       match arg[0].trim() {
-        "offset" => offset = arg[1].trim().replace("\"", "").parse::<usize>().unwrap(),
+        "offset" => offset = usize::from_str_radix(&arg[1].trim().replace("\"", ""), 16).unwrap(),
         "module" => module = String::from(arg[1].trim()),
         "symbol" => symbol = String::from(arg[1].trim()),
         "bypass" => bypass = true,
+        "without_base" => without_base = true,
         _ => (),
       }
     }
@@ -33,6 +36,7 @@ impl Args {
       module,
       symbol,
       bypass,
+      without_base,
     }
   }
 }
@@ -70,7 +74,7 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       .join(",");
 
     let mut attach = quote!(
-      pub unsafe fn #attach_ident() -> Result<(), Box<dyn Error>> {
+      pub unsafe fn #attach_ident() -> Result<(), Box<dyn std::error::Error>> {
         let target = target();
         #handle_ident.initialize(target, #ident)?.enable()?;
         Ok(())
@@ -80,7 +84,7 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
     if args.offset > 0 {
       attach = attach.replace(
         "target()",
-        format!("mem::transmute(utils::address({}))", args.offset).as_str(),
+        format!("std::mem::transmute(utils::address({}))", args.offset).as_str(),
       );
     } else if args.module != "" && args.symbol != "" {
       attach = attach.replace(
@@ -91,16 +95,25 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
         )
         .as_str(),
       );
+    } else if args.without_base {
+      attach = attach.replace(
+        "target()",
+        format!("std::mem::transmute(CONFIG.offset.{})", ident.to_string()).as_str(),
+      );
     } else {
       attach = attach.replace(
         "target()",
-        format!("mem::transmute(utils::address(CONFIG.offset.{}))", ident.to_string()).as_str(),
+        format!(
+          "std::mem::transmute(utils::address(CONFIG.offset.{}))",
+          ident.to_string()
+        )
+        .as_str(),
       );
     }
 
     if args.bypass {
       attach = quote!(
-        pub unsafe fn #attach_ident() -> Result<(), Box<dyn Error>> {
+        pub unsafe fn #attach_ident() -> Result<(), Box<dyn std::error::Error>> {
           Ok(())
         }
       )
@@ -108,7 +121,7 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     let result = quote!(
-      pub unsafe fn #detach_ident() -> Result<(), Box<dyn Error>> {
+      pub unsafe fn #detach_ident() -> Result<(), Box<dyn std::error::Error>> {
         #handle_ident.disable()?;
         Ok(())
       }

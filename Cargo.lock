@@ -198,7 +198,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dfhook"
+name = "dfint_hook"
 version = "0.1.0"
 dependencies = [
  "backtrace",
@@ -208,7 +208,6 @@ dependencies = [
  "encoding_rs",
  "encoding_rs_io",
  "exe",
- "libc",
  "log",
  "macro",
  "regex",
