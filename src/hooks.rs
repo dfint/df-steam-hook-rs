@@ -208,10 +208,20 @@ impl StringEntry {
 }
 
 #[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(target_os = "linux", hook(bypass))]
+#[cfg_attr(
+  target_os = "linux",
+  hook(
+    module = "libg_src_lib.so",
+    symbol = "_Z19standardstringentryRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEijRSt3setIlSt4lessIlESaIlEEPKc"
+  )
+)]
 fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *const u8, utf: *const u32) -> bool {
   unsafe {
     let utf_a = std::slice::from_raw_parts_mut(utf as *mut u32, 8);
+    #[cfg(target_os = "linux")]
+    {
+      let utf_a = std::slice::from_raw_parts_mut((&CONFIG.offset.enabler.unwrap() + 0x38d) as *mut u32, 8);
+    }
 
     for i in 0..8 {
       if utf_a[i] > 122 && utils::UTF_TO_CP1251.contains_key(&utf_a[i]) {
