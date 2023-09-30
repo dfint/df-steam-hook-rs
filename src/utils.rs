@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dlopen::raw::Library;
+use dlopen2::raw::Library;
 
 #[cfg(target_os = "windows")]
 const SDL2: &'static str = "SDL2.dll";
@@ -23,7 +23,15 @@ static SDL_MESSAGE_BOX: fn(u32, *const i8, *const i8, *const u8) -> i32 =
 static SDL_ERROR: fn() -> *const i8 = unsafe { symbol_handle::<fn() -> *const i8>(SDL2, "SDL_GetError") };
 
 pub unsafe fn symbol_handle<T>(module: &str, symbol: &str) -> T {
+  if module == "self" {
+    return symbol_handle_self::<T>(symbol);
+  }
   let lib = Library::open(module).expect("Could not open library");
+  unsafe { lib.symbol(symbol) }.unwrap()
+}
+
+pub unsafe fn symbol_handle_self<T>(symbol: &str) -> T {
+  let lib = Library::open_self().expect("Could not open self");
   unsafe { lib.symbol(symbol) }.unwrap()
 }
 

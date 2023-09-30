@@ -9,11 +9,17 @@ use crate::utils;
 
 use r#macro::hook;
 
+#[cfg(target_os = "linux")]
+#[static_init::dynamic]
+static ENABLER: usize = unsafe {
+  utils::symbol_handle_self::<*const i64>(&CONFIG.symbol.as_ref().unwrap().enabler.as_ref().unwrap()[1]) as usize
+};
+
 pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
   if CONFIG.settings.enable_translation {
-    attach_string_append()?;
     attach_string_copy_n()?;
     attach_string_append_n()?;
+    attach_std_string_append()?;
     attach_addst()?;
     attach_addst_top()?;
     attach_addst_flag()?;
@@ -31,9 +37,9 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
 
 pub unsafe fn detach_all() -> Result<(), Box<dyn std::error::Error>> {
   if CONFIG.settings.enable_translation {
-    detach_string_append()?;
     detach_string_copy_n()?;
     detach_string_append_n()?;
+    detach_std_string_append()?;
     detach_addst()?;
     detach_addst_top()?;
     detach_addst_flag()?;
@@ -49,7 +55,7 @@ pub unsafe fn detach_all() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
-#[cfg_attr(target_os = "windows", hook)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(bypass))]
 fn string_copy_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_char {
   unsafe {
@@ -66,7 +72,7 @@ fn string_copy_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_ch
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(bypass))]
 fn string_append_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_char {
   unsafe {
@@ -84,8 +90,8 @@ fn string_append_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_
 }
 
 #[cfg_attr(target_os = "windows", hook(bypass))]
-#[cfg_attr(target_os = "linux", hook)]
-fn string_append(dst: *const u8, src: *const c_char) -> *const u8 {
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn std_string_append(dst: *const u8, src: *const c_char) -> *const u8 {
   unsafe {
     match std::ffi::CStr::from_ptr(src).to_str() {
       (Ok(value)) => match DICTIONARY.get(value) {
@@ -100,14 +106,8 @@ fn string_append(dst: *const u8, src: *const c_char) -> *const u8 {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_ZN9graphicst5addstERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE13justificationi"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
@@ -131,14 +131,7 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   }
 }
 
-// #[cfg_attr(
-//   target_os = "linux",
-//   hook(
-//     module = "libg_src_lib.so",
-//     symbol = "_ZN9graphicst9top_addstERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE13justificationi"
-//   )
-// )]
-#[cfg_attr(target_os = "windows", hook)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(bypass))]
 fn addst_top(gps: usize, src: *const u8, a3: usize) {
   unsafe {
@@ -163,14 +156,8 @@ fn addst_top(gps: usize, src: *const u8, a3: usize) {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_ZN9graphicst10addst_flagERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE13justificationij"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
@@ -207,23 +194,14 @@ impl StringEntry {
   pub const STRINGENTRY_FILENAME: u8 = 32;
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_Z19standardstringentryRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEijRSt3setIlSt4lessIlESaIlEEPKc"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *const u8, utf: *const u32) -> bool {
   unsafe {
     let utf_a = std::slice::from_raw_parts_mut(utf as *mut u32, 8);
     #[cfg(target_os = "linux")]
     {
-      let utf_a = std::slice::from_raw_parts_mut(
-        (&CONFIG.offset.enabler.unwrap() + &CONFIG.offset.utf_input.unwrap()) as *mut u32,
-        8,
-      );
+      let utf_a = std::slice::from_raw_parts_mut((*ENABLER + &CONFIG.offset.utf_input.unwrap()) as *mut u32, 8);
     }
 
     for i in 0..8 {
@@ -312,14 +290,8 @@ fn lowercast(symbol: u8) -> u8 {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_Z15simplify_stringRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn simplify_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
@@ -339,14 +311,8 @@ fn simplify_string(src: *const u8) {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_Z17upper_case_stringRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn upper_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
@@ -366,14 +332,8 @@ fn upper_case_string(src: *const u8) {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_Z17lower_case_stringRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn lower_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
@@ -393,14 +353,8 @@ fn lower_case_string(src: *const u8) {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_Z23capitalize_string_wordsRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn capitalize_string_words(src: *const u8) {
   unsafe {
     let mut bracket_count: i32 = 0;
@@ -443,14 +397,8 @@ fn capitalize_string_words(src: *const u8) {
   }
 }
 
-#[cfg_attr(target_os = "windows", hook)]
-#[cfg_attr(
-  target_os = "linux",
-  hook(
-    module = "libg_src_lib.so",
-    symbol = "_Z28capitalize_string_first_wordRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE"
-  )
-)]
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn capitalize_string_first_word(src: *const u8) {
   unsafe {
     let mut bracket_count: i32 = 0;

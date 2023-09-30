@@ -20,6 +20,7 @@ pub struct Config {
   pub settings: Settings,
   pub offset: OffsetsValues,
   pub offset_metadata: OffsetsMetadata,
+  pub symbol: Option<SymbolsValues>,
   pub hook_version: String,
 }
 
@@ -51,6 +52,7 @@ pub struct Settings {
 pub struct Offsets {
   pub metadata: OffsetsMetadata,
   pub offsets: OffsetsValues,
+  pub symbols: Option<SymbolsValues>,
 }
 
 #[derive(Deserialize)]
@@ -62,10 +64,7 @@ pub struct OffsetsMetadata {
 
 #[derive(Deserialize)]
 pub struct OffsetsValues {
-  pub enabler: Option<usize>,
-  pub utf_input: Option<usize>,
   pub string_copy_n: Option<usize>,
-  pub string_append: Option<usize>,
   pub string_append_n: Option<usize>,
   pub addst: Option<usize>,
   pub addst_top: Option<usize>,
@@ -76,6 +75,22 @@ pub struct OffsetsValues {
   pub lower_case_string: Option<usize>,
   pub capitalize_string_words: Option<usize>,
   pub capitalize_string_first_word: Option<usize>,
+  pub utf_input: Option<usize>,
+}
+
+#[derive(Deserialize)]
+pub struct SymbolsValues {
+  pub addst: Option<Vec<String>>,
+  pub addst_top: Option<Vec<String>>,
+  pub addst_flag: Option<Vec<String>>,
+  pub standardstringentry: Option<Vec<String>>,
+  pub simplify_string: Option<Vec<String>>,
+  pub upper_case_string: Option<Vec<String>>,
+  pub lower_case_string: Option<Vec<String>>,
+  pub capitalize_string_words: Option<Vec<String>>,
+  pub capitalize_string_first_word: Option<Vec<String>>,
+  pub std_string_append: Option<Vec<String>>,
+  pub enabler: Option<Vec<String>>,
 }
 
 impl Config {
@@ -88,12 +103,13 @@ impl Config {
         settings: main_config.settings,
         offset: offsets.offsets,
         offset_metadata: offsets.metadata,
+        symbol: offsets.symbols,
         hook_version: match option_env!("HOOK_VERSION") {
           Some(version) => String::from(version),
           None => String::from("not-defined"),
         },
       }),
-      Err(_) => Err("Config Error".into()),
+      Err(e) => Err(format!("Config error {:?}", e).into()),
     }
   }
 
@@ -109,7 +125,7 @@ impl Config {
     let mut crc = checksum::crc::Crc::new(path.to_str().unwrap());
     match crc.checksum() {
       Ok(checksum) => Ok(checksum.crc32),
-      Err(_e) => Err("Checksum error".into()),
+      Err(e) => Err(format!("Checksum error {:?}", e).into()),
     }
   }
 
