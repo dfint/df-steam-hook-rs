@@ -115,7 +115,7 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
-          let mut cxxstr = CxxString::new(ptr, len);
+          let mut cxxstr = CxxString::new(ptr, len - 1);
           #[cfg(target_os = "linux")]
           {
             if cxxstr.len < 16 {
@@ -140,7 +140,7 @@ fn addst_top(gps: usize, src: *const u8, a3: usize) {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
-          let mut cxxstr = CxxString::new(ptr, len);
+          let mut cxxstr = CxxString::new(ptr, len - 1);
           #[cfg(target_os = "linux")]
           {
             if cxxstr.len < 16 {
@@ -165,7 +165,7 @@ fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
-          let mut cxxstr = CxxString::new(ptr, len);
+          let mut cxxstr = CxxString::new(ptr, len - 1);
           #[cfg(target_os = "linux")]
           {
             if cxxstr.len < 16 {
