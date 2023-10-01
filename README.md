@@ -1,11 +1,18 @@
 # df-steam-hook-rs
+
 [![Build](https://github.com/dfint/df-steam-hook-rs/actions/workflows/build.yml/badge.svg)](https://github.com/dfint/df-steam-hook-rs/actions/workflows/build.yml)
 
-Re-implementation of [df-steam-hook](https://github.com/dfint/df-steam-hook) in Rust.
+Re-implementation of [df-steam-hook](https://github.com/dfint/df-steam-hook) in
+Rust.
+
+Supports:
+
+- Windows (classic/steam/itch.io)
+- Linux (classic/steam/itch.io)
 
 Implemented:
+
 - config/offsets files
-- crash reports
 - dictionary from csv
 - translation hooks
 - enter string hooks (search)
