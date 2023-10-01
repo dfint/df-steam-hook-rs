@@ -35,23 +35,39 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
-pub unsafe fn detach_all() -> Result<(), Box<dyn std::error::Error>> {
-  if CONFIG.settings.enable_translation {
-    detach_string_copy_n()?;
-    detach_string_append_n()?;
-    detach_std_string_append()?;
-    detach_addst()?;
-    detach_addst_top()?;
-    detach_addst_flag()?;
-  }
-  if CONFIG.settings.enable_search {
-    detach_standardstringentry()?;
-    detach_simplify_string()?;
-    detach_upper_case_string()?;
-    detach_lower_case_string()?;
-    detach_capitalize_string_words()?;
-    detach_capitalize_string_first_word()?;
-  }
+pub unsafe fn enable_all() -> Result<(), Box<dyn std::error::Error>> {
+  enable_string_copy_n()?;
+  enable_string_append_n()?;
+  enable_std_string_append()?;
+  enable_addst()?;
+  enable_addst_top()?;
+  enable_addst_flag()?;
+
+  enable_standardstringentry()?;
+  enable_simplify_string()?;
+  enable_upper_case_string()?;
+  enable_lower_case_string()?;
+  enable_capitalize_string_words()?;
+  enable_capitalize_string_first_word()?;
+
+  Ok(())
+}
+
+pub unsafe fn disable_all() -> Result<(), Box<dyn std::error::Error>> {
+  disable_string_copy_n()?;
+  disable_string_append_n()?;
+  disable_std_string_append()?;
+  disable_addst()?;
+  disable_addst_top()?;
+  disable_addst_flag()?;
+
+  disable_standardstringentry()?;
+  disable_simplify_string()?;
+  disable_upper_case_string()?;
+  disable_lower_case_string()?;
+  disable_capitalize_string_words()?;
+  disable_capitalize_string_first_word()?;
+
   Ok(())
 }
 

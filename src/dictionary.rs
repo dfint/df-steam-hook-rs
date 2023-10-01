@@ -10,14 +10,17 @@ use crate::config::CONFIG;
 #[static_init::dynamic]
 pub static DICTIONARY: Dictionary = Dictionary::new(&CONFIG.settings.dictionary);
 
+#[allow(dead_code)]
 pub struct Dictionary {
   map: HashMap<String, Vec<u8>>,
+  path: &'static str,
 }
 
 impl Dictionary {
-  pub fn new(path: &String) -> Self {
+  pub fn new(path: &'static String) -> Self {
     Self {
       map: Dictionary::load(path).unwrap(),
+      path,
     }
   }
 
@@ -27,6 +30,11 @@ impl Dictionary {
 
   pub fn _size(&self) -> usize {
     self.map.capacity()
+  }
+
+  pub fn _reload(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    self.map = Self::load(self.path)?;
+    Ok(())
   }
 
   fn load(path: &str) -> Result<HashMap<String, Vec<u8>>, Box<dyn std::error::Error>> {

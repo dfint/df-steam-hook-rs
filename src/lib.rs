@@ -11,6 +11,7 @@ mod cxxstring;
 mod dictionary;
 mod hooks;
 mod utils;
+mod watchdog;
 
 use log::LevelFilter;
 use log::{error, info, trace};
@@ -24,6 +25,7 @@ extern "C" fn attach() {
   // unsafe {
   //   crash::install();
   // }
+  watchdog::install();
   simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace).unwrap();
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");
@@ -47,7 +49,7 @@ extern "C" fn attach() {
 #[no_mangle]
 extern "C" fn detach() {
   unsafe {
-    match hooks::detach_all() {
+    match hooks::disable_all() {
       _ => (),
     };
   }

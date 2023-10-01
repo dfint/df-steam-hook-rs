@@ -67,8 +67,9 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
     } = function;
 
     let attach_ident = format_ident!("attach_{}", ident);
-    let detach_ident = format_ident!("detach_{}", ident);
     let handle_ident = format_ident!("handle_{}", ident);
+    let enable_ident = format_ident!("enable_{}", ident);
+    let disable_ident = format_ident!("disable_{}", ident);
     let ret_type = quote!(#output).to_string();
     let inputs_unnamed = quote!(#inputs)
       .to_string()
@@ -80,7 +81,18 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut attach = quote!(
       pub unsafe fn #attach_ident() -> Result<(), Box<dyn std::error::Error>> {
         let target = target();
-        #handle_ident.initialize(target, #ident)?.enable()?;
+        #handle_ident.initialize(target, #ident)?;
+        #enable_ident()?;
+        Ok(())
+      }
+
+      pub unsafe fn #enable_ident() -> Result<(), Box<dyn std::error::Error>> {
+        #handle_ident.enable()?;
+        Ok(())
+      }
+
+      pub unsafe fn #disable_ident() -> Result<(), Box<dyn std::error::Error>> {
+        #handle_ident.disable()?;
         Ok(())
       }
     )
@@ -138,15 +150,19 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
         pub unsafe fn #attach_ident() -> Result<(), Box<dyn std::error::Error>> {
           Ok(())
         }
+
+        pub unsafe fn #enable_ident() -> Result<(), Box<dyn std::error::Error>> {
+          Ok(())
+        }
+
+        pub unsafe fn #disable_ident() -> Result<(), Box<dyn std::error::Error>> {
+          Ok(())
+        }
       )
       .to_string();
     }
 
     let result = quote!(
-      pub unsafe fn #detach_ident() -> Result<(), Box<dyn std::error::Error>> {
-        #handle_ident.disable()?;
-        Ok(())
-      }
       static_detour! { static #handle_ident: unsafe #abi fn() #output; }
       #vis #unsafety #constness fn #ident(#inputs) #output #block
     );
