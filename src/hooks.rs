@@ -1,20 +1,25 @@
 use retour::static_detour;
-use std::error::Error;
-use std::mem;
-use std::os::raw::c_char;
+use std::ffi::c_char;
 
 use crate::config::CONFIG;
-use crate::cxxset::CxxSet;
+// use crate::cxxset::CxxSet;
 use crate::cxxstring::CxxString;
 use crate::dictionary::DICTIONARY;
 use crate::utils;
 
 use r#macro::hook;
 
-pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
+#[cfg(target_os = "linux")]
+#[static_init::dynamic]
+static ENABLER: usize = unsafe {
+  utils::symbol_handle_self::<*const i64>(&CONFIG.symbol.as_ref().unwrap().enabler.as_ref().unwrap()[1]) as usize
+};
+
+pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
   if CONFIG.settings.enable_translation {
     attach_string_copy_n()?;
     attach_string_append_n()?;
+    attach_std_string_append()?;
     attach_addst()?;
     attach_addst_top()?;
     attach_addst_flag()?;
@@ -30,12 +35,36 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
-#[hook]
-extern "cdecl" fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+pub unsafe fn detach_all() -> Result<(), Box<dyn std::error::Error>> {
+  if CONFIG.settings.enable_translation {
+    detach_string_copy_n()?;
+    detach_string_append_n()?;
+    detach_std_string_append()?;
+    detach_addst()?;
+    detach_addst_top()?;
+    detach_addst_flag()?;
+  }
+  if CONFIG.settings.enable_search {
+    detach_standardstringentry()?;
+    detach_simplify_string()?;
+    detach_upper_case_string()?;
+    detach_lower_case_string()?;
+    detach_capitalize_string_words()?;
+    detach_capitalize_string_first_word()?;
+  }
+  Ok(())
+}
+
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(bypass))]
+fn string_copy_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_char {
   unsafe {
     match (utils::cstr(src, size + 1), size > 1) {
       (Ok(value), true) => match DICTIONARY.get(value) {
-        Some(translate) => original!(dst, translate.as_ptr(), translate.len()),
+        Some(translate) => {
+          let (ptr, len, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr as *const c_char, len - 1)
+        }
         _ => original!(dst, src, size),
       },
       (_, _) => original!(dst, src, size),
@@ -43,12 +72,16 @@ extern "cdecl" fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -
   }
 }
 
-#[hook]
-extern "cdecl" fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(bypass))]
+fn string_append_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_char {
   unsafe {
     match (utils::cstr(src, size + 1), size > 1) {
       (Ok(value), true) => match DICTIONARY.get(value) {
-        Some(translate) => original!(dst, translate.as_ptr(), translate.len()),
+        Some(translate) => {
+          let (ptr, len, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr as *const c_char, len - 1)
+        }
         _ => original!(dst, src, size),
       },
       (_, _) => original!(dst, src, size),
@@ -56,14 +89,39 @@ extern "cdecl" fn string_append_n(dst: *mut c_char, src: *const u8, size: usize)
   }
 }
 
-#[hook]
-extern "fastcall" fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
+#[cfg_attr(target_os = "windows", hook(bypass))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn std_string_append(dst: *const u8, src: *const c_char) -> *const u8 {
+  unsafe {
+    match std::ffi::CStr::from_ptr(src).to_str() {
+      (Ok(value)) => match DICTIONARY.get(value) {
+        Some(translate) => {
+          let (ptr, _, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr as *const c_char)
+        }
+        _ => original!(dst, src),
+      },
+      _ => original!(dst, src),
+    }
+  }
+}
+
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
-          let mut cxxstr = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
+          let (ptr, len, _) = translate.to_owned().into_raw_parts();
+          let mut cxxstr = CxxString::new(ptr, len - 1);
+          #[cfg(target_os = "linux")]
+          {
+            if cxxstr.len < 16 {
+              cxxstr.ptr = cxxstr.sso.buf.as_mut_ptr();
+            }
+          }
           original!(gps, cxxstr.as_ptr(), justify, space)
         }
         _ => original!(gps, src, justify, space),
@@ -73,14 +131,22 @@ extern "fastcall" fn addst(gps: usize, src: *const u8, justify: u8, space: u32) 
   }
 }
 
-#[hook]
-extern "fastcall" fn addst_top(gps: usize, src: *const u8, a3: usize) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(bypass))]
+fn addst_top(gps: usize, src: *const u8, a3: usize) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
-          let mut cxxstr = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
+          let (ptr, len, _) = translate.to_owned().into_raw_parts();
+          let mut cxxstr = CxxString::new(ptr, len - 1);
+          #[cfg(target_os = "linux")]
+          {
+            if cxxstr.len < 16 {
+              cxxstr.ptr = cxxstr.sso.buf.as_mut_ptr();
+            }
+          }
           original!(gps, cxxstr.as_ptr(), a3)
         }
         _ => original!(gps, src, a3),
@@ -90,14 +156,22 @@ extern "fastcall" fn addst_top(gps: usize, src: *const u8, a3: usize) {
   }
 }
 
-#[hook]
-extern "fastcall" fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
       Ok(converted) => match DICTIONARY.get(converted) {
         Some(translate) => {
-          let mut cxxstr = CxxString::new(translate.clone().as_mut_ptr(), translate.len());
+          let (ptr, len, _) = translate.to_owned().into_raw_parts();
+          let mut cxxstr = CxxString::new(ptr, len - 1);
+          #[cfg(target_os = "linux")]
+          {
+            if cxxstr.len < 16 {
+              cxxstr.ptr = cxxstr.sso.buf.as_mut_ptr();
+            }
+          }
           original!(gps, cxxstr.as_ptr(), a3, a4, flag)
         }
         _ => original!(gps, src, a3, a4, flag),
@@ -110,77 +184,91 @@ extern "fastcall" fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize
 #[non_exhaustive]
 struct StringEntry;
 
+#[allow(dead_code)]
 impl StringEntry {
   pub const LETTERS: u8 = 1;
   pub const SPACE: u8 = 2;
   pub const NUMBERS: u8 = 4;
   pub const CAPS: u8 = 8;
   pub const SYMBOLS: u8 = 16;
+  pub const STRINGENTRY_FILENAME: u8 = 32;
 }
 
-#[hook]
-extern "fastcall" fn standardstringentry(src: *const u8, maxlen: i64, flag: u8, events_ptr: *const u8) -> i32 {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *const u8, utf: *const u32) -> bool {
   unsafe {
-    let content = CxxString::from_ptr(src);
-    let events = CxxSet::<u32>::from_ptr(events_ptr);
-    let shift = CONFIG.offset.keybinding.unwrap_or(0);
-    let mut entry = shift + 1;
-    let mut ranges = vec![shift..=shift];
-
-    if (flag & StringEntry::SYMBOLS) > 0 {
-      ranges.push(shift..=(shift + 255));
-    }
-    if (flag & StringEntry::LETTERS) > 0 {
-      ranges.push((shift + 65)..=(shift + 90));
-      ranges.push((shift + 97)..=(shift + 122));
-      ranges.push((shift + 192)..=(shift + 255));
-    }
-    if (flag & StringEntry::SPACE) > 0 {
-      ranges.push((shift + 32)..=(shift + 32));
-    }
-    if (flag & StringEntry::NUMBERS) > 0 {
-      ranges.push((shift + 48)..=(shift + 57));
+    let utf_a = std::slice::from_raw_parts_mut(utf as *mut u32, 8);
+    #[cfg(target_os = "linux")]
+    {
+      let utf_a = std::slice::from_raw_parts_mut((*ENABLER + &CONFIG.offset.utf_input.unwrap()) as *mut u32, 8);
     }
 
-    'outer: for range in ranges.into_iter() {
-      'inner: for item in range.into_iter() {
-        if events.contains(item) {
-          entry = item;
-          if item > shift + 192 && item <= shift + 255 {
-            entry += 1;
-          }
-          break 'outer;
-        }
+    for i in 0..8 {
+      if utf_a[i] > 122 && utils::UTF_TO_CP1251.contains_key(&utf_a[i]) {
+        let entry = utils::UTF_TO_CP1251[&utf_a[i]];
+        utf_a[i] = match (flag & StringEntry::CAPS) > 0 {
+          true => capitalize(entry),
+          false => entry,
+        } as u32;
       }
     }
 
-    match entry - shift {
-      1 => return 0,
-      0 => {
-        if content.len > 0 {
-          content.resize(content.len - 1);
-        }
-      }
-      value => {
-        let mut cursor = content.len;
-        if cursor >= maxlen as usize {
-          cursor = (maxlen - 1) as usize;
-        }
-        if cursor < 0 {
-          cursor = 0;
-        }
-        if content.len < cursor + 1 {
-          content.resize(cursor + 1);
-        }
-        let letter = match flag & StringEntry::CAPS > 0 {
-          true => capitalize(value as u8),
-          false => value as u8,
-        };
-        content[cursor] = letter;
-      }
-    }
-    events.clear();
-    1
+    original!(src, maxlen, flag, events_ptr, utf_a.as_ptr())
+
+    // let mut content = CxxString::from_ptr(src);
+    // let events = CxxSet::<u32>::from_ptr(events_ptr);
+    // let shift = CONFIG.offset.keybinding.unwrap_or(0);
+
+    // if events.contains(shift + 1) && content.size() > 0 {
+    //   content.pop_back();
+    // }
+
+    // // if INTERFACEKEY_SELECT || INTERFACEKEY_LEAVESCREEN
+    // // lost mouse rbut here, cause it is in enabler instance
+    // if events.contains(1) || events.contains(2) {
+    //   return false;
+    // }
+    // events.clear();
+
+    // if content.size() >= maxlen {
+    //   return false;
+    // }
+
+    // let mut any_valid = false;
+    // let utf_a = std::slice::from_raw_parts(utf, 8);
+
+    // for i in 0..8 {
+    //   let mut entry: u8;
+    //   if utf_a[i] > 122 && utils::UTF_TO_CP1251.contains_key(&utf_a[i]) {
+    //     entry = utils::UTF_TO_CP1251[&utf_a[i]];
+    //   } else {
+    //     entry = utf_a[i] as u8;
+    //   }
+    //   if entry == 0 {
+    //     break;
+    //   }
+
+    //   if content.size() < maxlen && (entry == 10)
+    //     || (flag & StringEntry::SYMBOLS) > 0
+    //     || ((flag & StringEntry::LETTERS) > 0
+    //       && ((entry >= 97 && entry <= 122) || (entry >= 65 && entry <= 90) || (entry >= 192 && entry <= 255)))
+    //     || ((flag & StringEntry::SPACE) > 0 && entry == 32)
+    //     || ((flag & StringEntry::NUMBERS) > 0 && (entry >= 48 && entry <= 57))
+    //   {
+    //     if (flag & StringEntry::CAPS) > 0 {
+    //       entry = capitalize(entry);
+    //     }
+
+    //     any_valid = true;
+    //     content.push_back(entry);
+    //     if entry == 0 || entry == 10 || content.size() >= maxlen {
+    //       break;
+    //     }
+    //   }
+    // }
+
+    // any_valid
   }
 }
 
@@ -202,8 +290,9 @@ fn lowercast(symbol: u8) -> u8 {
   }
 }
 
-#[hook]
-extern "fastcall" fn simplify_string(src: *const u8) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn simplify_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -222,8 +311,9 @@ extern "fastcall" fn simplify_string(src: *const u8) {
   }
 }
 
-#[hook]
-extern "fastcall" fn upper_case_string(src: *const u8) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn upper_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -242,8 +332,9 @@ extern "fastcall" fn upper_case_string(src: *const u8) {
   }
 }
 
-#[hook]
-extern "fastcall" fn lower_case_string(src: *const u8) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn lower_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
@@ -262,11 +353,27 @@ extern "fastcall" fn lower_case_string(src: *const u8) {
   }
 }
 
-#[hook]
-extern "fastcall" fn capitalize_string_words(src: *const u8) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn capitalize_string_words(src: *const u8) {
   unsafe {
+    let mut bracket_count: i32 = 0;
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
+      match content[i] {
+        91 => {
+          bracket_count += 1;
+          continue;
+        }
+        93 => {
+          bracket_count -= 1;
+          continue;
+        }
+        _ => (),
+      };
+      if bracket_count > 0 {
+        continue;
+      }
       let mut conf = false;
       if (i > 0 && content[i - 1] == 32 || content[i - 1] == 34)
         || (i >= 2 && content[i - 1] == 39 && (content[i - 2] == 32 || content[i - 2] == 44))
@@ -290,11 +397,27 @@ extern "fastcall" fn capitalize_string_words(src: *const u8) {
   }
 }
 
-#[hook]
-extern "fastcall" fn capitalize_string_first_word(src: *const u8) {
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn capitalize_string_first_word(src: *const u8) {
   unsafe {
+    let mut bracket_count: i32 = 0;
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
+      match content[i] {
+        91 => {
+          bracket_count += 1;
+          continue;
+        }
+        93 => {
+          bracket_count -= 1;
+          continue;
+        }
+        _ => (),
+      };
+      if bracket_count > 0 {
+        continue;
+      }
       let mut conf = false;
       if (i > 0 && content[i - 1] == 32 || content[i - 1] == 34)
         || (i >= 2 && content[i - 1] == 39 && (content[i - 2] == 32 || content[i - 2] == 44))

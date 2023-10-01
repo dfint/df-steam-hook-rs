@@ -36,10 +36,9 @@ impl Dictionary {
     reader.read_to_string(&mut contents)?;
     let mut map = HashMap::<String, Vec<u8>>::new();
     for item in Regex::new(r#""(.+)","(.+)""#)?.captures_iter(&contents) {
-      map.insert(
-        String::from(item.get(1).unwrap().as_str()),
-        Vec::from(WINDOWS_1251.encode(item.get(2).unwrap().as_str()).0.as_ref()),
-      );
+      let mut v = Vec::from(WINDOWS_1251.encode(item.get(2).unwrap().as_str()).0.as_ref());
+      v.push(0);
+      map.insert(String::from(item.get(1).unwrap().as_str()), v);
     }
     Ok(map)
   }
