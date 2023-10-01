@@ -6,6 +6,7 @@ use encoding_rs_io::DecodeReaderBytesBuilder;
 use regex::Regex;
 
 use crate::config::CONFIG;
+use crate::utils;
 
 #[static_init::dynamic]
 pub static DICTIONARY: Dictionary = Dictionary::new(&CONFIG.settings.dictionary);
@@ -19,7 +20,15 @@ pub struct Dictionary {
 impl Dictionary {
   pub fn new(path: &'static String) -> Self {
     Self {
-      map: Dictionary::load(path).unwrap(),
+      map: Dictionary::load(path).unwrap_or_else(|_| {
+        log::error!("unable to load dictionary {}", path);
+        utils::message_box(
+          "dfint hook error",
+          format!("Unable to load dictionary {}", path).as_str(),
+          utils::MessageIconType::Warning,
+        );
+        HashMap::<String, Vec<u8>>::new()
+      }),
       path,
     }
   }
