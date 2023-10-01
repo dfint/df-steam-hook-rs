@@ -90,6 +90,7 @@ pub struct SymbolsValues {
   pub capitalize_string_words: Option<Vec<String>>,
   pub capitalize_string_first_word: Option<Vec<String>>,
   pub std_string_append: Option<Vec<String>>,
+  pub std_string_assign: Option<Vec<String>>,
   pub enabler: Option<Vec<String>>,
 }
 

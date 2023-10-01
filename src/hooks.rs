@@ -20,6 +20,7 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
     attach_string_copy_n()?;
     attach_string_append_n()?;
     attach_std_string_append()?;
+    attach_std_string_assign()?;
     attach_addst()?;
     attach_addst_top()?;
     attach_addst_flag()?;
@@ -39,6 +40,7 @@ pub unsafe fn enable_all() -> Result<(), Box<dyn std::error::Error>> {
   enable_string_copy_n()?;
   enable_string_append_n()?;
   enable_std_string_append()?;
+  enable_std_string_assign()?;
   enable_addst()?;
   enable_addst_top()?;
   enable_addst_flag()?;
@@ -57,6 +59,7 @@ pub unsafe fn disable_all() -> Result<(), Box<dyn std::error::Error>> {
   disable_string_copy_n()?;
   disable_string_append_n()?;
   disable_std_string_append()?;
+  disable_std_string_assign()?;
   disable_addst()?;
   disable_addst_top()?;
   disable_addst_flag()?;
@@ -122,6 +125,23 @@ fn std_string_append(dst: *const u8, src: *const c_char) -> *const u8 {
   }
 }
 
+#[cfg_attr(target_os = "windows", hook(bypass))]
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn std_string_assign(dst: *const u8, src: *const c_char) -> *const u8 {
+  unsafe {
+    match std::ffi::CStr::from_ptr(src).to_str() {
+      (Ok(value)) => match DICTIONARY.get(value) {
+        Some(translate) => {
+          let (ptr, _, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr as *const c_char)
+        }
+        _ => original!(dst, src),
+      },
+      _ => original!(dst, src),
+    }
+  }
+}
+
 #[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
@@ -148,8 +168,8 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
 }
 
 #[cfg_attr(target_os = "windows", hook(by_offset))]
-#[cfg_attr(target_os = "linux", hook(bypass))]
-fn addst_top(gps: usize, src: *const u8, a3: usize) {
+#[cfg_attr(target_os = "linux", hook(by_symbol))]
+fn addst_top(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
     match s.to_str() {
@@ -163,11 +183,11 @@ fn addst_top(gps: usize, src: *const u8, a3: usize) {
               cxxstr.ptr = cxxstr.sso.buf.as_mut_ptr();
             }
           }
-          original!(gps, cxxstr.as_ptr(), a3)
+          original!(gps, cxxstr.as_ptr(), justify, space)
         }
-        _ => original!(gps, src, a3),
+        _ => original!(gps, src, justify, space),
       },
-      _ => original!(gps, src, a3),
+      _ => original!(gps, src, justify, space),
     }
   }
 }
