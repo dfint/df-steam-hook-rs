@@ -37,7 +37,7 @@ pub struct ConfigMetadata {
 
 #[derive(Deserialize)]
 pub struct Settings {
-  pub log_level: i64,
+  pub log_level: usize,
   pub log_file: String,
   pub crash_report: bool,
   pub crash_report_dir: String,

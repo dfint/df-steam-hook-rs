@@ -25,7 +25,9 @@ extern "C" fn attach() {
   // unsafe {
   //   crash::install();
   // }
-  watchdog::install();
+  if CONFIG.settings.watchdog {
+    watchdog::install();
+  }
   simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace).unwrap();
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");
