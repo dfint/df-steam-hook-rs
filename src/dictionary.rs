@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 use std::io::prelude::*;
 
-use encoding_rs::WINDOWS_1251;
-use encoding_rs_io::DecodeReaderBytesBuilder;
-use regex::Regex;
-
 use crate::config::CONFIG;
 use crate::utils;
 
@@ -41,21 +37,25 @@ impl Dictionary {
     self.map.capacity()
   }
 
+  pub fn _data(&self) -> &HashMap<String, Vec<u8>> {
+    &self.map
+  }
+
   pub fn _reload(&mut self) -> Result<(), Box<dyn std::error::Error>> {
     self.map = Self::load(self.path)?;
     Ok(())
   }
 
+  #[allow(unused_must_use)]
   fn load(path: &str) -> Result<HashMap<String, Vec<u8>>, Box<dyn std::error::Error>> {
-    let file = std::fs::File::open(path)?;
-    let mut reader = DecodeReaderBytesBuilder::new().encoding(Some(WINDOWS_1251)).build(file);
-    let mut contents = String::new();
-    reader.read_to_string(&mut contents)?;
+    let mut file = std::fs::File::open(path)?;
+    let mut contents: Vec<u8> = Vec::new();
+    file.read_to_end(&mut contents);
     let mut map = HashMap::<String, Vec<u8>>::new();
-    for item in Regex::new(r#""(.+)","(.+)""#)?.captures_iter(&contents) {
-      let mut v = Vec::from(WINDOWS_1251.encode(item.get(2).unwrap().as_str()).0.as_ref());
+    for item in regex::bytes::Regex::new(r#"(?-u)"(.+)","(.+)""#)?.captures_iter(&contents) {
+      let mut v = Vec::<u8>::from(&item[2]);
       v.push(0);
-      map.insert(String::from(item.get(1).unwrap().as_str()), v);
+      map.insert(String::from_utf8_lossy(&item[1]).to_string(), v);
     }
     Ok(map)
   }

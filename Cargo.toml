@@ -13,8 +13,6 @@ macro = { path = "src/macro" }
 retour = { version = "0.3.1", features = ["static-detour"] }
 log = "0.4.20"
 simple-logging = "2.0.2"
-encoding_rs = "*"
-encoding_rs_io = "*"
 regex = "*"
 toml = "0.8.1"
 backtrace = "0.3.69"
