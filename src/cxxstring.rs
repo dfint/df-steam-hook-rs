@@ -96,6 +96,10 @@ impl CxxString {
     }
   }
 
+  pub unsafe fn to_bytes_without_nul(&mut self) -> &[u8] {
+    std::slice::from_raw_parts(self.ptr, self.len)
+  }
+
   pub fn size(&self) -> usize {
     self.len
   }
@@ -223,6 +227,14 @@ impl CxxString {
       },
       Err(err) => Err(err.into()),
     }
+  }
+
+  pub unsafe fn to_bytes_without_nul(&mut self) -> &[u8] {
+    let mut data: *const u8 = self.data.buf.as_ptr();
+    if self.capa >= 16 {
+      data = self.data.ptr;
+    }
+    std::slice::from_raw_parts(data, self.len)
   }
 
   pub unsafe fn as_ptr(&mut self) -> *const u8 {

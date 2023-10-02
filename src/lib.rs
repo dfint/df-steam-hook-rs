@@ -17,6 +17,7 @@ use log::LevelFilter;
 use log::{error, info, trace};
 
 use crate::config::CONFIG;
+use crate::dictionary::DICTIONARY;
 
 #[static_init::constructor]
 #[no_mangle]
@@ -41,6 +42,11 @@ extern "C" fn attach() {
   info!("pe checksum: 0x{:x}", CONFIG.offset_metadata.checksum);
   info!("offsets version: {}", CONFIG.offset_metadata.version);
   info!("hook version: {}", CONFIG.hook_version);
+  info!(
+    "dictionary \"{}\", items {}",
+    CONFIG.settings.dictionary,
+    DICTIONARY.size()
+  );
   unsafe {
     hooks::attach_all().unwrap();
   }

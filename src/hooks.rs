@@ -76,13 +76,13 @@ pub unsafe fn disable_all() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-fn string_copy_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_char {
+fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
-    match (utils::cstr(src, size + 1), size > 1) {
-      (Ok(value), true) => match DICTIONARY.get(value) {
+    match (std::slice::from_raw_parts(src, size), size > 1) {
+      (value, true) => match DICTIONARY.get(value) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
-          original!(dst, ptr as *const c_char, len - 1)
+          original!(dst, ptr, len - 1)
         }
         _ => original!(dst, src, size),
       },
@@ -93,13 +93,13 @@ fn string_copy_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_ch
 
 #[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(bypass))]
-fn string_append_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_char {
+fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
   unsafe {
-    match (utils::cstr(src, size + 1), size > 1) {
-      (Ok(value), true) => match DICTIONARY.get(value) {
+    match (std::slice::from_raw_parts(src, size), size > 1) {
+      (value, true) => match DICTIONARY.get(value) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
-          original!(dst, ptr as *const c_char, len - 1)
+          original!(dst, ptr, len - 1)
         }
         _ => original!(dst, src, size),
       },
@@ -110,13 +110,13 @@ fn string_append_n(dst: *mut c_char, src: *const c_char, size: usize) -> *mut c_
 
 #[cfg_attr(target_os = "windows", hook(bypass))]
 #[cfg_attr(target_os = "linux", hook(by_symbol))]
-fn std_string_append(dst: *const u8, src: *const c_char) -> *const u8 {
+fn std_string_append(dst: *const u8, src: *const u8) -> *const u8 {
   unsafe {
-    match std::ffi::CStr::from_ptr(src).to_str() {
-      (Ok(value)) => match DICTIONARY.get(value) {
+    match std::ffi::CStr::from_ptr(src as *const c_char).to_bytes() {
+      (value) => match DICTIONARY.get(value) {
         Some(translate) => {
           let (ptr, _, _) = translate.to_owned().into_raw_parts();
-          original!(dst, ptr as *const c_char)
+          original!(dst, ptr)
         }
         _ => original!(dst, src),
       },
@@ -127,13 +127,13 @@ fn std_string_append(dst: *const u8, src: *const c_char) -> *const u8 {
 
 #[cfg_attr(target_os = "windows", hook(bypass))]
 #[cfg_attr(target_os = "linux", hook(by_symbol))]
-fn std_string_assign(dst: *const u8, src: *const c_char) -> *const u8 {
+fn std_string_assign(dst: *const u8, src: *const u8) -> *const u8 {
   unsafe {
-    match std::ffi::CStr::from_ptr(src).to_str() {
-      (Ok(value)) => match DICTIONARY.get(value) {
+    match std::ffi::CStr::from_ptr(src as *const c_char).to_bytes() {
+      (value) => match DICTIONARY.get(value) {
         Some(translate) => {
           let (ptr, _, _) = translate.to_owned().into_raw_parts();
-          original!(dst, ptr as *const c_char)
+          original!(dst, ptr)
         }
         _ => original!(dst, src),
       },
@@ -147,8 +147,8 @@ fn std_string_assign(dst: *const u8, src: *const c_char) -> *const u8 {
 fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
-    match s.to_str() {
-      Ok(converted) => match DICTIONARY.get(converted) {
+    match s.to_bytes_without_nul() {
+      converted => match DICTIONARY.get(converted) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
           let mut cxxstr = CxxString::new(ptr, len - 1);
@@ -172,8 +172,8 @@ fn addst(gps: usize, src: *const u8, justify: u8, space: u32) {
 fn addst_top(gps: usize, src: *const u8, justify: u8, space: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
-    match s.to_str() {
-      Ok(converted) => match DICTIONARY.get(converted) {
+    match s.to_bytes_without_nul() {
+      converted => match DICTIONARY.get(converted) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
           let mut cxxstr = CxxString::new(ptr, len - 1);
@@ -197,8 +197,8 @@ fn addst_top(gps: usize, src: *const u8, justify: u8, space: u32) {
 fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
     let s = CxxString::from_ptr(src);
-    match s.to_str() {
-      Ok(converted) => match DICTIONARY.get(converted) {
+    match s.to_bytes_without_nul() {
+      converted => match DICTIONARY.get(converted) {
         Some(translate) => {
           let (ptr, len, _) = translate.to_owned().into_raw_parts();
           let mut cxxstr = CxxString::new(ptr, len - 1);
