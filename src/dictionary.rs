@@ -34,7 +34,7 @@ impl Dictionary {
   }
 
   pub fn _size(&self) -> usize {
-    self.map.capacity()
+    self.map.len()
   }
 
   pub fn _data(&self) -> &HashMap<String, Vec<u8>> {
