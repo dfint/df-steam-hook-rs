@@ -13,8 +13,7 @@ mod hooks;
 mod utils;
 mod watchdog;
 
-use log::LevelFilter;
-use log::{error, info, trace};
+use log::{debug, error, info};
 
 use crate::config::CONFIG;
 use crate::dictionary::DICTIONARY;
@@ -26,18 +25,15 @@ extern "C" fn attach() {
   // unsafe {
   //   crash::install();
   // }
-  if CONFIG.settings.watchdog {
-    watchdog::install();
-  }
-  simple_logging::log_to_file(&CONFIG.settings.log_file, LevelFilter::Trace).unwrap();
+  simple_logging::log_to_file(&CONFIG.settings.log_file, utils::log_level(CONFIG.settings.log_level)).unwrap();
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");
     utils::message_box(
-      "unable to find config file",
+      "Unable to find config file, translation unavaible",
       "dfint hook error",
       utils::MessageIconType::Error,
     );
-    std::process::exit(2);
+    return;
   }
   info!("pe checksum: 0x{:x}", CONFIG.offset_metadata.checksum);
   info!("offsets version: {}", CONFIG.offset_metadata.version);
@@ -47,10 +43,21 @@ extern "C" fn attach() {
     CONFIG.settings.dictionary,
     DICTIONARY.size()
   );
-  unsafe {
-    hooks::attach_all().unwrap();
+  match unsafe { hooks::attach_all() } {
+    Ok(_) => debug!("hooks attached"),
+    Err(err) => {
+      error!("unable to attach hooks, {:?}", err);
+      utils::message_box(
+        "Unable to attach hooks, translation unavaible",
+        "dfint hook error",
+        utils::MessageIconType::Error,
+      );
+      return;
+    }
+  };
+  if CONFIG.settings.watchdog {
+    watchdog::install();
   }
-  trace!("hooks attached");
 }
 
 #[static_init::destructor]
@@ -58,8 +65,7 @@ extern "C" fn attach() {
 extern "C" fn detach() {
   unsafe {
     match hooks::disable_all() {
-      _ => (),
+      _ => debug!("hooks detached"),
     };
   }
-  trace!("hooks detached");
 }

@@ -147,3 +147,15 @@ pub static UTF_TO_CP1251: std::collections::HashMap<u32, u8> = HashMap::from([
   (36560, 161),
   (40657, 162),
 ]);
+
+pub fn log_level(level: usize) -> log::LevelFilter {
+  match level {
+    0 => log::LevelFilter::Trace,
+    1 => log::LevelFilter::Debug,
+    2 => log::LevelFilter::Info,
+    3 => log::LevelFilter::Warn,
+    4 => log::LevelFilter::Error,
+    5 => log::LevelFilter::Off,
+    _ => log::LevelFilter::Info,
+  }
+}
