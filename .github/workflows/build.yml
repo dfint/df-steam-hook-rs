@@ -2,37 +2,37 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'src/**'
-      - '.github/workflows/build.yml'
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - ".github/workflows/build.yml"
 
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'src/**'
-      - '.github/workflows/build.yml'
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - ".github/workflows/build.yml"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: [ubuntu-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly-2022-11-06
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2022-11-06
 
-    - uses: Swatinem/rust-cache@v2
-    
-    - name: Build
-      run: cargo +nightly-2022-11-06 build --release
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo +nightly-2022-11-06 build --release
