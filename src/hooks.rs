@@ -1,3 +1,4 @@
+use anyhow::Result;
 use retour::static_detour;
 use std::ffi::c_char;
 
@@ -15,7 +16,7 @@ static ENABLER: usize = unsafe {
   utils::symbol_handle_self::<*const i64>(&CONFIG.symbol.as_ref().unwrap().enabler.as_ref().unwrap()[1]) as usize
 };
 
-pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
+pub unsafe fn attach_all() -> Result<()> {
   if CONFIG.settings.enable_translation {
     attach_string_copy_n()?;
     attach_string_append_n()?;
@@ -36,7 +37,7 @@ pub unsafe fn attach_all() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
-pub unsafe fn enable_all() -> Result<(), Box<dyn std::error::Error>> {
+pub unsafe fn enable_all() -> Result<()> {
   enable_string_copy_n()?;
   enable_string_append_n()?;
   enable_std_string_append()?;
@@ -55,7 +56,7 @@ pub unsafe fn enable_all() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
-pub unsafe fn disable_all() -> Result<(), Box<dyn std::error::Error>> {
+pub unsafe fn disable_all() -> Result<()> {
   disable_string_copy_n()?;
   disable_string_append_n()?;
   disable_std_string_append()?;

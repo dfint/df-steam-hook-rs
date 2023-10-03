@@ -79,19 +79,19 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       .join(",");
 
     let mut attach = quote!(
-      pub unsafe fn #attach_ident() -> Result<(), Box<dyn std::error::Error>> {
+      pub unsafe fn #attach_ident() -> Result<()> {
         let target = target();
         #handle_ident.initialize(target, #ident)?;
         #enable_ident()?;
         Ok(())
       }
 
-      pub unsafe fn #enable_ident() -> Result<(), Box<dyn std::error::Error>> {
+      pub unsafe fn #enable_ident() -> Result<()> {
         #handle_ident.enable()?;
         Ok(())
       }
 
-      pub unsafe fn #disable_ident() -> Result<(), Box<dyn std::error::Error>> {
+      pub unsafe fn #disable_ident() -> Result<()> {
         #handle_ident.disable()?;
         Ok(())
       }
@@ -147,15 +147,15 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
 
     if args.bypass {
       attach = quote!(
-        pub unsafe fn #attach_ident() -> Result<(), Box<dyn std::error::Error>> {
+        pub unsafe fn #attach_ident() -> Result<()> {
           Ok(())
         }
 
-        pub unsafe fn #enable_ident() -> Result<(), Box<dyn std::error::Error>> {
+        pub unsafe fn #enable_ident() -> Result<()> {
           Ok(())
         }
 
-        pub unsafe fn #disable_ident() -> Result<(), Box<dyn std::error::Error>> {
+        pub unsafe fn #disable_ident() -> Result<()> {
           Ok(())
         }
       )

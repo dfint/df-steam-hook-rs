@@ -22,6 +22,7 @@ serde = "1.0.185"
 static_init = "1.0.3"
 dlopen2 = "0.6.1"
 rdev = "0.5.3"
+anyhow = "1.0.75"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 exe = "0.5.6"

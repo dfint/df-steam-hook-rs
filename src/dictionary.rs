@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::HashMap;
 use std::io::prelude::*;
 
@@ -16,15 +17,18 @@ pub struct Dictionary {
 impl Dictionary {
   pub fn new(path: &'static String) -> Self {
     Self {
-      map: Dictionary::load(path).unwrap_or_else(|_| {
-        log::error!("unable to load dictionary {}", path);
-        utils::message_box(
-          "dfint hook error",
-          format!("Unable to load dictionary {}", path).as_str(),
-          utils::MessageIconType::Warning,
-        );
-        HashMap::<Vec<u8>, Vec<u8>>::new()
-      }),
+      map: match Dictionary::load(path) {
+        Ok(value) => value,
+        Err(_) => {
+          log::error!("unable to load dictionary {}", path);
+          utils::message_box(
+            "dfint hook error",
+            format!("Unable to load dictionary {}", path).as_str(),
+            utils::MessageIconType::Warning,
+          );
+          HashMap::<Vec<u8>, Vec<u8>>::new()
+        }
+      },
       path,
     }
   }
@@ -41,13 +45,13 @@ impl Dictionary {
     &self.map
   }
 
-  pub fn _reload(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+  pub fn _reload(&mut self) -> Result<()> {
     self.map = Self::load(self.path)?;
     Ok(())
   }
 
   #[allow(unused_must_use)]
-  fn load(path: &str) -> Result<HashMap<Vec<u8>, Vec<u8>>, Box<dyn std::error::Error>> {
+  fn load(path: &str) -> Result<HashMap<Vec<u8>, Vec<u8>>> {
     let mut file = std::fs::File::open(path)?;
     let mut contents: Vec<u8> = Vec::new();
     file.read_to_end(&mut contents);
