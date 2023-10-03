@@ -49,7 +49,7 @@ jobs:
       - name: Upload artifact (win)
         uses: actions/upload-artifact@v3
         if: matrix.os == 'windows-latest'
-          path: /target/release/dfint_hook.dll
+          path: \target\release\dfint_hook.dll
 
       - name: Upload artifact (linux)
         uses: actions/upload-artifact@v3
