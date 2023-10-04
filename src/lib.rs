@@ -29,8 +29,8 @@ extern "C" fn attach() {
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");
     utils::message_box(
-      "Unable to find config file, translation unavaible",
       "dfint hook error",
+      "Unable to find config file, translation unavaible",
       utils::MessageIconType::Error,
     );
     return;
@@ -43,20 +43,22 @@ extern "C" fn attach() {
     CONFIG.settings.dictionary,
     DICTIONARY.size()
   );
-  match unsafe { hooks::attach_all() } {
-    Ok(_) => debug!("hooks attached"),
-    Err(err) => {
-      error!("unable to attach hooks, {:?}", err);
-      utils::message_box(
-        "Unable to attach hooks, translation unavaible",
-        "dfint hook error",
-        utils::MessageIconType::Error,
-      );
-      return;
+  if CONFIG.offset_metadata.name != "not found" {
+    match unsafe { hooks::attach_all() } {
+      Ok(_) => debug!("hooks attached"),
+      Err(err) => {
+        error!("unable to attach hooks, {:?}", err);
+        utils::message_box(
+          "dfint hook error",
+          "Unable to attach hooks, translation unavaible",
+          utils::MessageIconType::Error,
+        );
+        return;
+      }
+    };
+    if CONFIG.settings.watchdog {
+      watchdog::install();
     }
-  };
-  if CONFIG.settings.watchdog {
-    watchdog::install();
   }
 }
 

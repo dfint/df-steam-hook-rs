@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use std::path::Path;
 
 use crate::utils;
@@ -13,13 +13,13 @@ const CONFIG_FILE: &'static str = "./dfint_data/dfint_config.toml";
 const OFFSETS_DIR: &'static str = "./dfint_data/offsets/";
 
 #[static_init::dynamic]
-pub static CONFIG: Config = Config::new().unwrap();
+pub static CONFIG: Config = Config::new();
 
 pub struct Config {
   pub metadata: ConfigMetadata,
   pub settings: Settings,
-  pub offset: OffsetsValues,
   pub offset_metadata: OffsetsMetadata,
+  pub offset: Option<OffsetsValues>,
   pub symbol: Option<SymbolsValues>,
   pub hook_version: String,
 }
@@ -51,7 +51,7 @@ pub struct Settings {
 #[derive(Deserialize)]
 pub struct Offsets {
   pub metadata: OffsetsMetadata,
-  pub offsets: OffsetsValues,
+  pub offsets: Option<OffsetsValues>,
   pub symbols: Option<SymbolsValues>,
 }
 
@@ -95,22 +95,39 @@ pub struct SymbolsValues {
 }
 
 impl Config {
-  pub fn new() -> Result<Self> {
-    let checksum = Self::checksum(Path::new(EXE_FILE))?;
-    let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE))?;
-    match Self::walk_offsets(Path::new(OFFSETS_DIR), checksum) {
-      Ok(offsets) => Ok(Self {
+  pub fn new() -> Self {
+    let checksum = Self::checksum(Path::new(EXE_FILE)).unwrap();
+    let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE)).unwrap();
+
+    let offsets = Self::walk_offsets(Path::new(OFFSETS_DIR), checksum);
+
+    match offsets {
+      Some(o) => Self {
         metadata: main_config.metadata,
         settings: main_config.settings,
-        offset: offsets.offsets,
-        offset_metadata: offsets.metadata,
-        symbol: offsets.symbols,
+        offset_metadata: o.metadata,
+        offset: o.offsets,
+        symbol: o.symbols,
         hook_version: match option_env!("HOOK_VERSION") {
           Some(version) => String::from(version),
           None => String::from("not-defined"),
         },
-      }),
-      Err(e) => Err(anyhow!("Config error {:?}", e)),
+      },
+      None => Self {
+        metadata: main_config.metadata,
+        settings: main_config.settings,
+        offset_metadata: OffsetsMetadata {
+          name: String::from("not found"),
+          version: String::from("not found"),
+          checksum,
+        },
+        offset: None,
+        symbol: None,
+        hook_version: match option_env!("HOOK_VERSION") {
+          Some(version) => String::from(version),
+          None => String::from("not-defined"),
+        },
+      },
     }
   }
 
@@ -126,20 +143,20 @@ impl Config {
     let mut crc = checksum::crc::Crc::new(path.to_str().unwrap());
     match crc.checksum() {
       Ok(checksum) => Ok(checksum.crc32),
-      Err(e) => Err(anyhow!("Checksum error {:?}", e).into()),
+      Err(e) => Err(anyhow::anyhow!("Checksum error {:?}", e).into()),
     }
   }
 
-  fn walk_offsets(path: &Path, target_checksum: u32) -> Result<Offsets> {
-    for entry in std::fs::read_dir(path)? {
-      let entry = entry?;
+  fn walk_offsets(path: &Path, target_checksum: u32) -> Option<Offsets> {
+    for entry in std::fs::read_dir(path).unwrap() {
+      let entry = entry.unwrap();
       let pentry = entry.path();
       if !pentry.is_file() {
         continue;
       }
-      let offsets = Self::parse_toml::<Offsets>(&pentry)?;
+      let offsets = Self::parse_toml::<Offsets>(&pentry).unwrap();
       if offsets.metadata.checksum == target_checksum {
-        return Ok(offsets);
+        return Some(offsets);
       }
     }
 
@@ -153,7 +170,7 @@ impl Config {
       utils::MessageIconType::Error,
     );
 
-    std::process::exit(2);
+    None
   }
 
   fn parse_toml<T: for<'de> serde::Deserialize<'de>>(path: &Path) -> Result<T> {

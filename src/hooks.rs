@@ -13,7 +13,12 @@ use r#macro::hook;
 #[cfg(target_os = "linux")]
 #[static_init::dynamic]
 static ENABLER: usize = unsafe {
-  utils::symbol_handle_self::<*const i64>(&CONFIG.symbol.as_ref().unwrap().enabler.as_ref().unwrap()[1]) as usize
+  match CONFIG.symbol.is_some() {
+    true => {
+      utils::symbol_handle_self::<*const i64>(&CONFIG.symbol.as_ref().unwrap().enabler.as_ref().unwrap()[1]) as usize
+    }
+    false => 0 as usize,
+  }
 };
 
 pub unsafe fn attach_all() -> Result<()> {
@@ -238,7 +243,10 @@ fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *con
     let utf_a = std::slice::from_raw_parts_mut(utf as *mut u32, 8);
     #[cfg(target_os = "linux")]
     {
-      let utf_a = std::slice::from_raw_parts_mut((*ENABLER + &CONFIG.offset.utf_input.unwrap()) as *mut u32, 8);
+      let utf_a = std::slice::from_raw_parts_mut(
+        (*ENABLER + &CONFIG.offset.as_ref().unwrap().utf_input.unwrap()) as *mut u32,
+        8,
+      );
     }
 
     for i in 0..8 {

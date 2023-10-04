@@ -130,7 +130,7 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       (_, _, _, bo, _) if bo => attach.replace(
         "target()",
         format!(
-          "std::mem::transmute(utils::address(CONFIG.offset.{}.unwrap()))",
+          "std::mem::transmute(utils::address(CONFIG.offset.as_ref().unwrap().{}.unwrap()))",
           ident.to_string()
         )
         .as_str(),
@@ -138,7 +138,7 @@ pub fn hook(args: TokenStream, input: TokenStream) -> TokenStream {
       (_, _, _, _, _) => attach.replace(
         "target()",
         format!(
-          "std::mem::transmute(utils::address(CONFIG.offset.{}.unwrap()))",
+          "std::mem::transmute(utils::address(CONFIG.offset.as_ref().unwrap().{}.unwrap()))",
           ident.to_string()
         )
         .as_str(),
