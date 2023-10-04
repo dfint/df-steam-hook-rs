@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use std::path::Path;
 
 use crate::utils;
@@ -98,22 +98,21 @@ impl Config {
   pub fn new() -> Self {
     let checksum = Self::checksum(Path::new(EXE_FILE)).unwrap();
     let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE)).unwrap();
+    let hook_version = match option_env!("HOOK_VERSION") {
+      Some(version) => String::from(version),
+      None => String::from("not-defined"),
+    };
 
-    let offsets = Self::walk_offsets(Path::new(OFFSETS_DIR), checksum);
-
-    match offsets {
-      Some(o) => Self {
+    match Self::walk_offsets(Path::new(OFFSETS_DIR), checksum) {
+      Ok(Some(o)) => Self {
         metadata: main_config.metadata,
         settings: main_config.settings,
         offset_metadata: o.metadata,
         offset: o.offsets,
         symbol: o.symbols,
-        hook_version: match option_env!("HOOK_VERSION") {
-          Some(version) => String::from(version),
-          None => String::from("not-defined"),
-        },
+        hook_version,
       },
-      None => Self {
+      _ => Self {
         metadata: main_config.metadata,
         settings: main_config.settings,
         offset_metadata: OffsetsMetadata {
@@ -123,10 +122,7 @@ impl Config {
         },
         offset: None,
         symbol: None,
-        hook_version: match option_env!("HOOK_VERSION") {
-          Some(version) => String::from(version),
-          None => String::from("not-defined"),
-        },
+        hook_version,
       },
     }
   }
@@ -140,23 +136,23 @@ impl Config {
 
   #[cfg(target_os = "linux")]
   fn checksum(path: &Path) -> Result<u32> {
-    let mut crc = checksum::crc::Crc::new(path.to_str().unwrap());
+    let mut crc = checksum::crc::Crc::new(path.to_str().context("unable to read path")?);
     match crc.checksum() {
       Ok(checksum) => Ok(checksum.crc32),
-      Err(e) => Err(anyhow::anyhow!("Checksum error {:?}", e).into()),
+      Err(e) => Err(anyhow!("Checksum error {:?}", e).into()),
     }
   }
 
-  fn walk_offsets(path: &Path, target_checksum: u32) -> Option<Offsets> {
-    for entry in std::fs::read_dir(path).unwrap() {
-      let entry = entry.unwrap();
+  fn walk_offsets(path: &Path, target_checksum: u32) -> Result<Option<Offsets>> {
+    for entry in std::fs::read_dir(path)? {
+      let entry = entry?;
       let pentry = entry.path();
       if !pentry.is_file() {
         continue;
       }
-      let offsets = Self::parse_toml::<Offsets>(&pentry).unwrap();
+      let offsets = Self::parse_toml::<Offsets>(&pentry)?;
       if offsets.metadata.checksum == target_checksum {
-        return Some(offsets);
+        return Ok(Some(offsets));
       }
     }
 
@@ -170,7 +166,7 @@ impl Config {
       utils::MessageIconType::Error,
     );
 
-    None
+    Ok(None)
   }
 
   fn parse_toml<T: for<'de> serde::Deserialize<'de>>(path: &Path) -> Result<T> {
