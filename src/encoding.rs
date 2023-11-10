@@ -9,6 +9,7 @@ pub struct Encoding {
   pub uppercase: Vec<u8>,
   pub lowercase: Vec<u8>,
   pub utf: HashMap<u32, u8>,
+  pub parsed: bool,
 }
 
 const PATH_ENCODING: &'static str = "./dfint_data/encoding.toml";
@@ -17,17 +18,7 @@ impl Encoding {
   pub fn new() -> Self {
     match Self::parse_encodings(Path::new(PATH_ENCODING)) {
       Ok(v) => v,
-      Err(_) => {
-        let blank: [u8; 256] = core::array::from_fn(|i| i as u8);
-        Self {
-          capitalize: blank.clone().to_vec(),
-          lowercast: blank.clone().to_vec(),
-          simplify: blank.clone().to_vec(),
-          uppercase: blank.clone().to_vec(),
-          lowercase: blank.to_vec(),
-          utf: HashMap::new(),
-        }
-      }
+      Err(_) => Self::default(),
     }
   }
 
@@ -52,6 +43,7 @@ impl Encoding {
       uppercase: Self::replace_transition(uppercase_table, Some(capitalize))?,
       lowercase: Self::replace_transition(lowercase_table, Some(lowercast))?,
       utf: Self::utf_transition(utf_table)?,
+      parsed: true,
     })
   }
 
@@ -103,6 +95,21 @@ impl Encoding {
       Ok(out)
     } else {
       Ok(vec![value.parse::<u8>()?])
+    }
+  }
+}
+
+impl Default for Encoding {
+  fn default() -> Self {
+    let blank: [u8; 256] = core::array::from_fn(|i| i as u8);
+    Self {
+      capitalize: blank.clone().to_vec(),
+      lowercast: blank.clone().to_vec(),
+      simplify: blank.clone().to_vec(),
+      uppercase: blank.clone().to_vec(),
+      lowercase: blank.to_vec(),
+      utf: HashMap::new(),
+      parsed: false,
     }
   }
 }

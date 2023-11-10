@@ -30,7 +30,7 @@ pub unsafe fn attach_all() -> Result<()> {
     attach_addst_top()?;
     attach_addst_flag()?;
   }
-  if CONFIG.settings.enable_search {
+  if CONFIG.settings.enable_search && CONFIG.encoding.parsed {
     attach_standardstringentry()?;
     attach_simplify_string()?;
     attach_upper_case_string()?;

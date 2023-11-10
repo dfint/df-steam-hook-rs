@@ -21,9 +21,6 @@ use crate::dictionary::DICTIONARY;
 #[no_mangle]
 extern "C" fn attach() {
   std::env::set_var("RUST_BACKTRACE", "1");
-  // unsafe {
-  //   crash::install();
-  // }
   simple_logging::log_to_file(&CONFIG.settings.log_file, utils::log_level(CONFIG.settings.log_level)).unwrap();
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");
@@ -66,8 +63,7 @@ extern "C" fn attach() {
 extern "C" fn detach() {
   unsafe {
     watchdog::uninstall();
-    match hooks::disable_all() {
-      _ => debug!("hooks detached"),
-    };
+    let _ = hooks::disable_all();
+    debug!("hooks detached");
   }
 }
