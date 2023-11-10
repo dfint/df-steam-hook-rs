@@ -5,10 +5,9 @@ extern crate serde_derive;
 extern crate toml;
 
 mod config;
-// mod crash;
-mod cxxset;
 mod cxxstring;
 mod dictionary;
+mod encoding;
 mod hooks;
 mod utils;
 mod watchdog;
@@ -66,6 +65,7 @@ extern "C" fn attach() {
 #[no_mangle]
 extern "C" fn detach() {
   unsafe {
+    watchdog::uninstall();
     match hooks::disable_all() {
       _ => debug!("hooks detached"),
     };

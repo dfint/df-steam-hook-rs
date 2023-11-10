@@ -3,7 +3,6 @@ use retour::static_detour;
 use std::ffi::c_char;
 
 use crate::config::CONFIG;
-// use crate::cxxset::CxxSet;
 use crate::cxxstring::CxxString;
 use crate::dictionary::DICTIONARY;
 use crate::utils;
@@ -42,7 +41,7 @@ pub unsafe fn attach_all() -> Result<()> {
   Ok(())
 }
 
-pub unsafe fn enable_all() -> Result<()> {
+pub unsafe fn enable_translation() -> Result<()> {
   enable_string_copy_n()?;
   enable_string_append_n()?;
   enable_std_string_append()?;
@@ -50,18 +49,26 @@ pub unsafe fn enable_all() -> Result<()> {
   enable_addst()?;
   enable_addst_top()?;
   enable_addst_flag()?;
+  Ok(())
+}
 
+pub unsafe fn enable_search() -> Result<()> {
   enable_standardstringentry()?;
   enable_simplify_string()?;
   enable_upper_case_string()?;
   enable_lower_case_string()?;
   enable_capitalize_string_words()?;
   enable_capitalize_string_first_word()?;
-
   Ok(())
 }
 
-pub unsafe fn disable_all() -> Result<()> {
+pub unsafe fn enable_all() -> Result<()> {
+  enable_translation()?;
+  enable_search()?;
+  Ok(())
+}
+
+pub unsafe fn disable_translation() -> Result<()> {
   disable_string_copy_n()?;
   disable_string_append_n()?;
   disable_std_string_append()?;
@@ -69,7 +76,10 @@ pub unsafe fn disable_all() -> Result<()> {
   disable_addst()?;
   disable_addst_top()?;
   disable_addst_flag()?;
+  Ok(())
+}
 
+pub unsafe fn disable_search() -> Result<()> {
   disable_standardstringentry()?;
   disable_simplify_string()?;
   disable_upper_case_string()?;
@@ -77,6 +87,12 @@ pub unsafe fn disable_all() -> Result<()> {
   disable_capitalize_string_words()?;
   disable_capitalize_string_first_word()?;
 
+  Ok(())
+}
+
+pub unsafe fn disable_all() -> Result<()> {
+  disable_translation()?;
+  disable_search()?;
   Ok(())
 }
 
@@ -250,8 +266,8 @@ fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *con
     }
 
     for i in 0..8 {
-      if utf_a[i] > 122 && utils::UTF_TO_CP1251.contains_key(&utf_a[i]) {
-        let entry = utils::UTF_TO_CP1251[&utf_a[i]];
+      if utf_a[i] > 122 && CONFIG.encoding.utf.contains_key(&utf_a[i]) {
+        let entry = CONFIG.encoding.utf[&utf_a[i]];
         utf_a[i] = match (flag & StringEntry::CAPS) > 0 {
           true => capitalize(entry),
           false => entry,
@@ -260,79 +276,16 @@ fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *con
     }
 
     original!(src, maxlen, flag, events_ptr, utf_a.as_ptr())
-
-    // let mut content = CxxString::from_ptr(src);
-    // let events = CxxSet::<u32>::from_ptr(events_ptr);
-    // let shift = CONFIG.offset.keybinding.unwrap_or(0);
-
-    // if events.contains(shift + 1) && content.size() > 0 {
-    //   content.pop_back();
-    // }
-
-    // // if INTERFACEKEY_SELECT || INTERFACEKEY_LEAVESCREEN
-    // // lost mouse rbut here, cause it is in enabler instance
-    // if events.contains(1) || events.contains(2) {
-    //   return false;
-    // }
-    // events.clear();
-
-    // if content.size() >= maxlen {
-    //   return false;
-    // }
-
-    // let mut any_valid = false;
-    // let utf_a = std::slice::from_raw_parts(utf, 8);
-
-    // for i in 0..8 {
-    //   let mut entry: u8;
-    //   if utf_a[i] > 122 && utils::UTF_TO_CP1251.contains_key(&utf_a[i]) {
-    //     entry = utils::UTF_TO_CP1251[&utf_a[i]];
-    //   } else {
-    //     entry = utf_a[i] as u8;
-    //   }
-    //   if entry == 0 {
-    //     break;
-    //   }
-
-    //   if content.size() < maxlen && (entry == 10)
-    //     || (flag & StringEntry::SYMBOLS) > 0
-    //     || ((flag & StringEntry::LETTERS) > 0
-    //       && ((entry >= 97 && entry <= 122) || (entry >= 65 && entry <= 90) || (entry >= 192 && entry <= 255)))
-    //     || ((flag & StringEntry::SPACE) > 0 && entry == 32)
-    //     || ((flag & StringEntry::NUMBERS) > 0 && (entry >= 48 && entry <= 57))
-    //   {
-    //     if (flag & StringEntry::CAPS) > 0 {
-    //       entry = capitalize(entry);
-    //     }
-
-    //     any_valid = true;
-    //     content.push_back(entry);
-    //     if entry == 0 || entry == 10 || content.size() >= maxlen {
-    //       break;
-    //     }
-    //   }
-    // }
-
-    // any_valid
   }
 }
 
 fn capitalize(symbol: u8) -> u8 {
-  match symbol {
-    symbol if symbol >= 97 && symbol <= 122 => symbol - 32, // latin
-    symbol if symbol >= 224 => symbol - 32,                 // cyrillic
-    symbol if symbol == 184 => 168,                         // cyrillic ё
-    _ => symbol,
-  }
+  CONFIG.encoding.capitalize[symbol as usize]
 }
 
+#[allow(dead_code)]
 fn lowercast(symbol: u8) -> u8 {
-  match symbol {
-    symbol if symbol >= 65 && symbol <= 90 => symbol + 32,   // latin
-    symbol if symbol >= 192 && symbol <= 223 => symbol + 32, // cyrillic
-    symbol if symbol == 168 => 184,                          // cyrillic ё
-    _ => symbol,
-  }
+  CONFIG.encoding.lowercast[symbol as usize]
 }
 
 #[cfg_attr(target_os = "windows", hook(by_offset))]
@@ -341,17 +294,7 @@ fn simplify_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
-      content[i] = match lowercast(content[i]) {
-        129 | 150 | 151 | 154 | 163 => 117,
-        152 => 121,
-        164 | 165 => 110,
-        131..=134 | 142 | 143 | 145 | 146 | 160 => 97,
-        130 | 136..=138 | 144 => 101,
-        139..=141 | 161 => 105,
-        147..=149 | 153 | 162 => 111,
-        128 | 135 => 99,
-        value => value,
-      };
+      content[i] = CONFIG.encoding.simplify[content[i] as usize];
     }
   }
 }
@@ -362,17 +305,7 @@ fn upper_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
-      content[i] = match capitalize(content[i]) {
-        129 => 154,
-        164 => 165,
-        132 => 142,
-        134 => 143,
-        130 => 144,
-        148 => 153,
-        135 => 128,
-        145 => 146,
-        value => value,
-      };
+      content[i] = CONFIG.encoding.uppercase[content[i] as usize]
     }
   }
 }
@@ -383,17 +316,7 @@ fn lower_case_string(src: *const u8) {
   unsafe {
     let mut content = CxxString::from_ptr(src);
     for i in 0..content.len {
-      content[i] = match lowercast(content[i]) {
-        154 => 129,
-        165 => 164,
-        142 => 132,
-        143 => 134,
-        144 => 130,
-        153 => 148,
-        128 => 135,
-        146 => 145,
-        value => value,
-      };
+      content[i] = CONFIG.encoding.lowercase[content[i] as usize]
     }
   }
 }
@@ -426,17 +349,7 @@ fn capitalize_string_words(src: *const u8) {
         conf = true;
       }
       if i == 0 || conf {
-        content[i] = match capitalize(content[i]) {
-          129 => 154,
-          164 => 165,
-          132 => 142,
-          134 => 143,
-          130 => 144,
-          148 => 153,
-          135 => 128,
-          145 => 146,
-          value => value,
-        };
+        content[i] = CONFIG.encoding.uppercase[content[i] as usize];
       }
     }
   }
@@ -470,17 +383,7 @@ fn capitalize_string_first_word(src: *const u8) {
         conf = true;
       }
       if i == 0 || conf {
-        content[i] = match capitalize(content[i]) {
-          129 => 154,
-          164 => 165,
-          132 => 142,
-          134 => 143,
-          130 => 144,
-          148 => 153,
-          135 => 128,
-          145 => 146,
-          value => value,
-        };
+        content[i] = CONFIG.encoding.uppercase[content[i] as usize];
         if content[i] != 32 && content[i] != 34 {
           return;
         }

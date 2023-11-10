@@ -1,55 +1,34 @@
+extern crate device_query;
+use device_query::{DeviceState, Keycode};
+
 use crate::hooks;
 
+#[static_init::dynamic]
+static mut KILL: bool = false;
+
 pub fn install() {
-  let _listener = std::thread::spawn(move || {
-    static mut BUTTON_F2: bool = false;
-    static mut BUTTON_F3: bool = false;
-    static mut BUTTON_CTRL: bool = false;
+  std::thread::spawn(move || {
+    let state = DeviceState::new();
+    let mut hook_enabled: bool = true;
 
-    static mut HOOK_ENABLED: bool = true;
-
-    unsafe fn check_event() {
-      let result = match (BUTTON_F2, BUTTON_F3, BUTTON_CTRL) {
-        (true, _, true) => match HOOK_ENABLED {
-          true => {
-            HOOK_ENABLED = false;
-            log::info!("hooks disabled");
-            hooks::disable_all()
-          }
-          false => {
-            HOOK_ENABLED = true;
-            log::info!("hooks enabled");
-            hooks::enable_all()
-          }
-        },
-        (_, _, _) => Ok(()),
+    while !*KILL.read() {
+      let keys = state.query_keymap();
+      if keys.contains(&Keycode::F2) && keys.contains(&Keycode::LControl) {
+        if hook_enabled {
+          hook_enabled = false;
+          log::info!("hooks disabled");
+          let _ = unsafe { hooks::disable_all() };
+        } else {
+          hook_enabled = true;
+          log::info!("hooks enabled");
+          let _ = unsafe { hooks::enable_all() };
+        }
       };
-
-      match result {
-        Ok(_) => (),
-        Err(err) => log::error!("Error in watchdog {}", err),
-      };
-    }
-
-    if let Err(error) = rdev::listen(move |event| match event.event_type {
-      rdev::EventType::KeyPress(rdev::Key::F2) => unsafe {
-        BUTTON_F2 = true;
-        check_event();
-      },
-      rdev::EventType::KeyRelease(rdev::Key::F2) => unsafe { BUTTON_F2 = false },
-      rdev::EventType::KeyPress(rdev::Key::F3) => unsafe {
-        BUTTON_F3 = true;
-        check_event();
-      },
-      rdev::EventType::KeyRelease(rdev::Key::F3) => unsafe { BUTTON_F3 = false },
-      rdev::EventType::KeyPress(rdev::Key::ControlLeft) => unsafe {
-        BUTTON_CTRL = true;
-        check_event();
-      },
-      rdev::EventType::KeyRelease(rdev::Key::ControlLeft) => unsafe { BUTTON_CTRL = false },
-      _ => (),
-    }) {
-      log::error!("Unable to start watchdog: {:?}", error)
+      std::thread::sleep(std::time::Duration::from_millis(150));
     }
   });
+}
+
+pub fn uninstall() {
+  *KILL.write() = true;
 }

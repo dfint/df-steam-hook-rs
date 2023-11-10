@@ -21,8 +21,8 @@ serde_derive = "1.0.164"
 serde = "1.0.185"
 static_init = "1.0.3"
 dlopen2 = "0.6.1"
-rdev = "0.5.3"
 anyhow = "1.0.75"
+device_query = "1.1.3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 exe = "0.5.6"

@@ -2,7 +2,7 @@
 use anyhow::{anyhow, Context, Result};
 use std::path::Path;
 
-use crate::utils;
+use crate::{encoding::Encoding, utils};
 
 #[cfg(target_os = "windows")]
 const EXE_FILE: &'static str = "./Dwarf Fortress.exe";
@@ -23,6 +23,7 @@ pub struct Config {
   pub offset: Option<OffsetsValues>,
   pub symbol: Option<SymbolsValues>,
   pub hook_version: String,
+  pub encoding: Encoding,
 }
 
 #[derive(Deserialize)]
@@ -99,6 +100,7 @@ impl Config {
   pub fn new() -> Self {
     let checksum = Self::checksum(Path::new(EXE_FILE)).unwrap();
     let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE)).unwrap();
+    let encoding = Encoding::new();
     let hook_version = match option_env!("HOOK_VERSION") {
       Some(version) => String::from(version),
       None => String::from("not-defined"),
@@ -112,6 +114,7 @@ impl Config {
         offset: o.offsets,
         symbol: o.symbols,
         hook_version,
+        encoding,
       },
       _ => Self {
         metadata: main_config.metadata,
@@ -124,6 +127,7 @@ impl Config {
         offset: None,
         symbol: None,
         hook_version,
+        encoding,
       },
     }
   }
