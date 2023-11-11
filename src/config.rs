@@ -137,7 +137,7 @@ impl Config {
 
   #[cfg(target_os = "linux")]
   fn checksum(path: &str) -> Result<u32> {
-    let mut crc = checksum::crc::Crc::new(path.context("unable to read path")?);
+    let mut crc = checksum::crc::Crc::new(path);
     match crc.checksum() {
       Ok(checksum) => Ok(checksum.crc32),
       Err(e) => Err(anyhow!("Checksum error {:?}", e).into()),
