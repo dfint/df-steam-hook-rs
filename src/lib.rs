@@ -5,6 +5,7 @@ extern crate serde_derive;
 extern crate toml;
 
 mod config;
+mod constants;
 mod cxxstring;
 mod dictionary;
 mod encoding;
@@ -15,6 +16,7 @@ mod watchdog;
 use log::{debug, error, info};
 
 use crate::config::CONFIG;
+use crate::constants::PATH_DICTIONARY;
 use crate::dictionary::DICTIONARY;
 
 #[static_init::constructor]
@@ -34,11 +36,7 @@ extern "C" fn attach() {
   info!("pe checksum: 0x{:x}", CONFIG.offset_metadata.checksum);
   info!("offsets version: {}", CONFIG.offset_metadata.version);
   info!("hook version: {}", CONFIG.hook_version);
-  info!(
-    "dictionary \"{}\", items {}",
-    CONFIG.settings.dictionary,
-    DICTIONARY.size()
-  );
+  info!("dictionary \"{}\", items {}", PATH_DICTIONARY, DICTIONARY.size());
   if CONFIG.offset_metadata.name != "not found" {
     match unsafe { hooks::attach_all() } {
       Ok(_) => debug!("hooks attached"),

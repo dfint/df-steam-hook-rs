@@ -2,6 +2,8 @@ use anyhow::{anyhow, Result};
 use std::{collections::HashMap, path::Path};
 use toml::{map::Map, Table, Value};
 
+use crate::constants::PATH_ENCODING;
+
 pub struct Encoding {
   pub capitalize: Vec<u8>,
   pub lowercast: Vec<u8>,
@@ -11,8 +13,6 @@ pub struct Encoding {
   pub utf: HashMap<u32, u8>,
   pub parsed: bool,
 }
-
-const PATH_ENCODING: &'static str = "./dfint_data/encoding.toml";
 
 impl Encoding {
   pub fn new() -> Self {

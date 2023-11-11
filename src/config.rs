@@ -2,16 +2,11 @@
 use anyhow::{anyhow, Context, Result};
 use std::path::Path;
 
-use crate::{encoding::Encoding, utils};
-
-#[cfg(target_os = "windows")]
-const EXE_FILE: &'static str = "./Dwarf Fortress.exe";
-
-#[cfg(target_os = "linux")]
-const EXE_FILE: &'static str = "./dwarfort";
-
-const CONFIG_FILE: &'static str = "./dfint_data/dfint_config.toml";
-const OFFSETS_DIR: &'static str = "./dfint_data/offsets/";
+use crate::{
+  constants::{PATH_CONFIG, PATH_EXE, PATH_OFFSETS},
+  encoding::Encoding,
+  utils,
+};
 
 #[static_init::dynamic]
 pub static CONFIG: Config = Config::new();
@@ -41,12 +36,8 @@ pub struct ConfigMetadata {
 pub struct Settings {
   pub log_level: usize,
   pub log_file: String,
-  pub crash_report: bool,
-  pub crash_report_dir: String,
   pub enable_search: bool,
   pub enable_translation: bool,
-  pub enable_patches: bool,
-  pub dictionary: String,
   pub watchdog: bool,
 }
 
@@ -98,84 +89,63 @@ pub struct SymbolsValues {
 
 impl Config {
   pub fn new() -> Self {
-    let checksum = Self::checksum(Path::new(EXE_FILE)).unwrap();
-    let main_config = Self::parse_toml::<MainConfig>(Path::new(CONFIG_FILE)).unwrap();
+    let checksum = Self::checksum(PATH_EXE).unwrap_or(0);
+    let main_config = Self::parse_toml::<MainConfig>(PATH_CONFIG).unwrap();
     let encoding = Encoding::new();
     let hook_version = match option_env!("HOOK_VERSION") {
       Some(version) => String::from(version),
       None => String::from("not-defined"),
     };
 
-    match Self::walk_offsets(Path::new(OFFSETS_DIR), checksum) {
-      Ok(Some(o)) => Self {
-        metadata: main_config.metadata,
-        settings: main_config.settings,
-        offset_metadata: o.metadata,
-        offset: o.offsets,
-        symbol: o.symbols,
-        hook_version,
-        encoding,
-      },
-      _ => Self {
-        metadata: main_config.metadata,
-        settings: main_config.settings,
-        offset_metadata: OffsetsMetadata {
-          name: String::from("not found"),
-          version: String::from("not found"),
-          checksum,
-        },
-        offset: None,
-        symbol: None,
-        hook_version,
-        encoding,
-      },
+    let (offset_metadata, offset, symbol) = match Self::parse_toml::<Offsets>(PATH_OFFSETS) {
+      Ok(o) if o.metadata.checksum == checksum => (o.metadata, o.offsets, o.symbols),
+      _ => {
+        utils::message_box(
+          "dfint hook error",
+          format!("This DF version is not supported.\nDF checksum: 0x{:x}", checksum).as_str(),
+          utils::MessageIconType::Error,
+        );
+        (
+          OffsetsMetadata {
+            name: String::from("not found"),
+            version: String::from("not found"),
+            checksum,
+          },
+          None,
+          None,
+        )
+      }
+    };
+
+    Self {
+      metadata: main_config.metadata,
+      settings: main_config.settings,
+      offset_metadata,
+      offset,
+      symbol,
+      hook_version,
+      encoding,
     }
   }
 
   #[cfg(target_os = "windows")]
-  fn checksum(path: &Path) -> Result<u32> {
+  fn checksum(path: &str) -> Result<u32> {
     use exe::{VecPE, PE};
-    let pefile = VecPE::from_disk_file(path)?;
+    let pefile = VecPE::from_disk_file(Path::new(path))?;
     Ok(pefile.get_nt_headers_64()?.file_header.time_date_stamp)
   }
 
   #[cfg(target_os = "linux")]
-  fn checksum(path: &Path) -> Result<u32> {
-    let mut crc = checksum::crc::Crc::new(path.to_str().context("unable to read path")?);
+  fn checksum(path: &str) -> Result<u32> {
+    let mut crc = checksum::crc::Crc::new(path.context("unable to read path")?);
     match crc.checksum() {
       Ok(checksum) => Ok(checksum.crc32),
       Err(e) => Err(anyhow!("Checksum error {:?}", e).into()),
     }
   }
 
-  fn walk_offsets(path: &Path, target_checksum: u32) -> Result<Option<Offsets>> {
-    for entry in std::fs::read_dir(path)? {
-      let entry = entry?;
-      let pentry = entry.path();
-      if !pentry.is_file() {
-        continue;
-      }
-      let offsets = Self::parse_toml::<Offsets>(&pentry)?;
-      if offsets.metadata.checksum == target_checksum {
-        return Ok(Some(offsets));
-      }
-    }
-
-    utils::message_box(
-      format!(
-        "unable to find offsets file for current version of DF\nchecksum: 0x{:x}",
-        target_checksum
-      )
-      .as_str(),
-      "dfint hook error",
-      utils::MessageIconType::Error,
-    );
-
-    Ok(None)
-  }
-
-  fn parse_toml<T: for<'de> serde::Deserialize<'de>>(path: &Path) -> Result<T> {
-    let content = std::fs::read_to_string(path)?;
+  fn parse_toml<T: for<'de> serde::Deserialize<'de>>(path: &str) -> Result<T> {
+    let content = std::fs::read_to_string(Path::new(path))?;
     let data: T = toml::from_str(content.as_str())?;
     Ok(data)
   }

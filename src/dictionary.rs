@@ -2,11 +2,11 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::io::prelude::*;
 
-use crate::config::CONFIG;
+use crate::constants::PATH_DICTIONARY;
 use crate::utils;
 
 #[static_init::dynamic]
-pub static DICTIONARY: Dictionary = Dictionary::new(&CONFIG.settings.dictionary);
+pub static DICTIONARY: Dictionary = Dictionary::new(PATH_DICTIONARY);
 
 #[allow(dead_code)]
 pub struct Dictionary {
@@ -15,15 +15,15 @@ pub struct Dictionary {
 }
 
 impl Dictionary {
-  pub fn new(path: &'static String) -> Self {
+  pub fn new(path: &'static str) -> Self {
     Self {
       map: match Dictionary::load(path) {
         Ok(value) => value,
         Err(_) => {
-          log::error!("unable to load dictionary {}", path);
+          log::error!("unable to load dictionary {path}");
           utils::message_box(
             "dfint hook error",
-            format!("Unable to load dictionary {}", path).as_str(),
+            format!("Unable to load dictionary {path}").as_str(),
             utils::MessageIconType::Warning,
           );
           HashMap::<Vec<u8>, Vec<u8>>::new()
