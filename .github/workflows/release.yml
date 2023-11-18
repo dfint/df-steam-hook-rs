@@ -9,6 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  VERSION: 0.0.1
 
 jobs:
   build:
@@ -64,11 +65,16 @@ jobs:
           name: artifact
           path: ./
 
-      - run: ls ./
+      - run: |
+          ls ./
+          mv ./dfint_hook.dll ./hook_${{ env.VERSION }}.dll
+          mv ./libdfint_hook.so ./hook_${{ env.VERSION }}.so
+          ls ./
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{steps.download.outputs.download-path}}/dfint_hook.dll ${{steps.download.outputs.download-path}}/libdfint_hook.so
-          tag_name: ${{ github.event.inputs.version }}
+          files: ./hook_${{ env.VERSION }}.dll
+            ./hook_${{ env.VERSION }}.so
+          tag_name: ${{ env.VERSION }}
           draft: true
