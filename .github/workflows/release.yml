@@ -1,6 +1,11 @@
 name: Release
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: ["release-wf"]
+    paths:
+      - ".github/workflows/release.yml"
 
 env:
   CARGO_TERM_COLOR: always
