@@ -74,6 +74,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ./hook_${{ env.VERSION }}.[dll|so]
+          files: |
+            hook_${{ env.VERSION }}.dll
+            hook_${{ env.VERSION }}.so
           tag_name: ${{ env.VERSION }}
           draft: true
