@@ -2,10 +2,10 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version"
-        required: true
+  push:
+    branches: ["release-wf"]
+    paths:
+      - ".github/workflows/release.yml"
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,6 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fetch version from Cargo.toml
+        shell: bash
+        run: echo VERSION=$(cat Cargo.toml | awk -F'"' '/^version/ {print $2}') >> $GITHUB_ENV
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -33,12 +37,8 @@ jobs:
           sudo apt install libxi-dev
           sudo apt install libxtst-dev
 
-      - name: Build (windows)
-        if: matrix.os == 'windows-latest'
-        run: $env:HOOK_VERSION=${{ github.sha }} && cargo +nightly-2022-11-06 build --release
-
-      - name: Build (linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build
+        shell: bash
         run: HOOK_VERSION=${{ github.sha }} cargo +nightly-2022-11-06 build --release
 
       - name: Upload artifact (win)
@@ -69,11 +69,15 @@ jobs:
           name: artifact
           path: ./
 
+      - run: |
+          mv ./dfint_hook.dll ./hook_${{ env.VERSION }}.dll
+          mv ./libdfint_hook.so ./hook_${{ env.VERSION }}.so
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            hook_${{ github.event.inputs.version }}.dll
-            hook_${{ github.event.inputs.version }}.so
-          tag_name: ${{ github.event.inputs.version }}
+            hook_${{ env.VERSION }}.dll
+            hook_${{ env.VERSION }}.so
+          tag_name: ${{ env.VERSION }}
           draft: true
