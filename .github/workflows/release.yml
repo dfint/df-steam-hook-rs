@@ -23,7 +23,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly-2022-11-06
 
       - uses: Swatinem/rust-cache@v2
 
@@ -34,7 +34,7 @@ jobs:
           sudo apt install libxtst-dev
 
       - name: Build
-        run: cargo build --release
+        run: cargo +nightly-2022-11-06 build --release
 
       - name: Upload artifact (win)
         uses: actions/upload-artifact@v3
