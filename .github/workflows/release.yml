@@ -9,6 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  VERSION: 0.0.1
 
 jobs:
   build:
@@ -19,10 +20,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Fetch version from Cargo.toml
-        shell: bash
-        run: echo VERSION=$(cat Cargo.toml | awk -F'"' '/^version/ {print $2}') >> $GITHUB_ENV
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -69,7 +66,12 @@ jobs:
           name: artifact
           path: ./
 
+      - name: Fetch version from Cargo.toml
+        shell: bash
+        run: echo VERSION=$(cat Cargo.toml | awk -F'"' '/^version/ {print $2}') >> $GITHUB_ENV
+
       - run: |
+          echo "Version: ${{ env.VERSION }}"
           mv ./dfint_hook.dll ./hook_${{ env.VERSION }}.dll
           mv ./libdfint_hook.so ./hook_${{ env.VERSION }}.so
 
