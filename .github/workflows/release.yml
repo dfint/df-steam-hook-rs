@@ -1,0 +1,68 @@
+name: Release
+
+on: workflow_dispatch
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install linux build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt install libxi-dev
+          sudo apt install libxtst-dev
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Upload artifact (win)
+        uses: actions/upload-artifact@v3
+        if: matrix.os == 'windows-latest'
+        with:
+          name: artifact
+          path: ./target/release/dfint_hook.dll
+
+      - name: Upload artifact (linux)
+        uses: actions/upload-artifact@v3
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: artifact
+          path: ./target/release/libdfint_hook.so
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore files
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: artifact
+          path: ./
+
+      - run: ls ./
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{steps.download.outputs.download-path}}/dfint_hook.dll ${{steps.download.outputs.download-path}}/libdfint_hook.so
+          tag_name: ${{ github.event.inputs.version }}
+          draft: true
