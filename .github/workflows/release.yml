@@ -2,14 +2,13 @@ name: Release
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["release-wf"]
-    paths:
-      - ".github/workflows/release.yml"
+    inputs:
+      version:
+        description: "Version"
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
-  VERSION: 0.0.1
 
 jobs:
   build:
@@ -34,8 +33,13 @@ jobs:
           sudo apt install libxi-dev
           sudo apt install libxtst-dev
 
-      - name: Build
-        run: cargo +nightly-2022-11-06 build --release
+      - name: Build (windows)
+        if: matrix.os == 'windows-latest'
+        run: $env:HOOK_VERSION=${{ github.sha }} && cargo +nightly-2022-11-06 build --release
+
+      - name: Build (linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: HOOK_VERSION=${{ github.sha }} cargo +nightly-2022-11-06 build --release
 
       - name: Upload artifact (win)
         uses: actions/upload-artifact@v3
@@ -65,17 +69,11 @@ jobs:
           name: artifact
           path: ./
 
-      - run: |
-          ls ./
-          mv ./dfint_hook.dll ./hook_${{ env.VERSION }}.dll
-          mv ./libdfint_hook.so ./hook_${{ env.VERSION }}.so
-          ls ./
-
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            hook_${{ env.VERSION }}.dll
-            hook_${{ env.VERSION }}.so
-          tag_name: ${{ env.VERSION }}
+            hook_${{ github.event.inputs.version }}.dll
+            hook_${{ github.event.inputs.version }}.so
+          tag_name: ${{ github.event.inputs.version }}
           draft: true
