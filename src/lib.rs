@@ -65,3 +65,8 @@ extern "C" fn detach() {
     debug!("hooks detached");
   }
 }
+
+#[no_mangle]
+extern "C" fn super_secret_dfint_sign() -> u8 {
+  return 69;
+}
