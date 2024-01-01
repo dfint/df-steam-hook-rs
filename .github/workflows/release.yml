@@ -35,14 +35,14 @@ jobs:
         run: HOOK_VERSION=${{ github.sha }} cargo +nightly-2022-11-06 build --release
 
       - name: Upload artifact (win)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: matrix.os == 'windows-latest'
         with:
           name: artifact
           path: ./target/release/dfint_hook.dll
 
       - name: Upload artifact (linux)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
         with:
           name: artifact
