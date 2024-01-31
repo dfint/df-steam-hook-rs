@@ -8,7 +8,7 @@ Supports Windows and Linux versions of Dwarf Fortress, including [classic](http:
 
 Implemented:
 
-- using of config/offsets files
+- using of config/offsets files (more or less the same config format which is/was used in [df-steam-hook](https://github.com/dfint/df-steam-hook))
 - using dictionary from csv
 - translation hooks
 - text entry hooks (e.g. search)
