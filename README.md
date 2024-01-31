@@ -19,7 +19,7 @@ Implemented:
 
 For installation of rust and cargo [see the link](https://doc.rust-lang.org/cargo/getting-started/installation.html).
 
-> **Note**  
+> [!NOTE]  
 > The use of system `rustc` and `cargo` often leads to build errors.
 
 On Linux, after the installation use the following command:
