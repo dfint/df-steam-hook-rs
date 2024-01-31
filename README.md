@@ -11,7 +11,7 @@ Implemented:
 - using of config/offsets files
 - using dictionary from csv
 - translation hooks
-- enter string hooks (search)
+- text entry hooks (e.g. search)
 
 ## Build and run
 
