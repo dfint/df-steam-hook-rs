@@ -42,8 +42,6 @@ cargo +nightly-2022-11-06 build --release
 
 ### Prepare the game
 
-To enable translation, you need to change the game settings to your native language.
-
 Copy:
 * `target/release/libdfint_hook.so` to `libdfhooks.so` in the game's directory on Linux
 * or `target/release/dfint_hook.dll` to `dfhooks.dll` on Windows
