@@ -20,7 +20,7 @@ chrono = "0.4.34"
 serde_derive = "1.0.164"
 serde = "1.0.185"
 static_init = "1.0.3"
-dlopen2 = "0.6.1"
+dlopen2 = "0.7.0"
 anyhow = "1.0.79"
 device_query = "2.0.0"
 
