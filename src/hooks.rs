@@ -218,6 +218,11 @@ fn addst_top(gps: usize, src: *const u8, justify: u8, space: u32) {
 #[cfg_attr(target_os = "linux", hook(by_symbol))]
 fn addst_flag(gps: usize, src: *const u8, a3: usize, a4: usize, flag: u32) {
   unsafe {
+    #[cfg(target_os = "windows")]
+    {
+      return original!(gps, src, a3, a4, flag);
+    }
+
     let s = CxxString::from_ptr(src);
     match s.to_bytes_without_nul() {
       converted => match DICTIONARY.get(converted) {
