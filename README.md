@@ -31,7 +31,7 @@ There's no `source` command on Windows, just install `rustup`, it will add cargo
 Then install `nightly-2022-11-06` toolchain using `rustup`:
 
 ```shell
-rustup install nightly-2022-11-06-x86_64-unknown-linux-gnu
+rustup install nightly-2022-11-06
 ```
 
 ### Build
