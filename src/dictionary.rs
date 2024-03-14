@@ -56,13 +56,13 @@ impl Dictionary {
     let mut contents: Vec<u8> = Vec::new();
     file.read_to_end(&mut contents);
     let mut map = HashMap::<Vec<u8>, Vec<u8>>::new();
-    let quote = &b"\""[0];
+    const QUOTE: &u8 = &b"\""[0];
     for item in regex::bytes::Regex::new(r#"(?-u)"(.+)","(.+)""#)?.captures_iter(&contents) {
       let mut k = item[1].to_vec();
       let mut v = item[2].to_vec();
       v.push(0);
-      k.dedup_by(|a, b| a == quote && b == quote);
-      v.dedup_by(|a, b| a == quote && b == quote);
+      k.dedup_by(|a, b| a == QUOTE && b == QUOTE);
+      v.dedup_by(|a, b| a == QUOTE && b == QUOTE);
       map.insert(k, v);
     }
     Ok(map)
