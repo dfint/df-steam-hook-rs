@@ -59,6 +59,7 @@ pub struct OffsetsMetadata {
 pub struct OffsetsValues {
   pub string_copy_n: Option<usize>,
   pub string_append_n: Option<usize>,
+  pub std_string_ctor: Option<usize>,
   pub addst: Option<usize>,
   pub addst_top: Option<usize>,
   pub addst_flag: Option<usize>,

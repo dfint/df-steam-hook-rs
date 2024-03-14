@@ -24,6 +24,7 @@ pub unsafe fn attach_all() -> Result<()> {
   if CONFIG.settings.enable_translation {
     attach_string_copy_n()?;
     attach_string_append_n()?;
+    attach_std_string_ctor()?;
     attach_std_string_append()?;
     attach_std_string_assign()?;
     attach_addst()?;
@@ -44,6 +45,7 @@ pub unsafe fn attach_all() -> Result<()> {
 pub unsafe fn enable_translation() -> Result<()> {
   enable_string_copy_n()?;
   enable_string_append_n()?;
+  enable_std_string_ctor()?;
   enable_std_string_append()?;
   enable_std_string_assign()?;
   enable_addst()?;
@@ -71,6 +73,7 @@ pub unsafe fn enable_all() -> Result<()> {
 pub unsafe fn disable_translation() -> Result<()> {
   disable_string_copy_n()?;
   disable_string_append_n()?;
+  disable_std_string_ctor()?;
   disable_std_string_append()?;
   disable_std_string_assign()?;
   disable_addst()?;
@@ -86,7 +89,6 @@ pub unsafe fn disable_search() -> Result<()> {
   disable_lower_case_string()?;
   disable_capitalize_string_words()?;
   disable_capitalize_string_first_word()?;
-
   Ok(())
 }
 
@@ -116,6 +118,23 @@ fn string_copy_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
 #[cfg_attr(target_os = "windows", hook(by_offset))]
 #[cfg_attr(target_os = "linux", hook(bypass))]
 fn string_append_n(dst: *mut c_char, src: *const u8, size: usize) -> *mut c_char {
+  unsafe {
+    match (std::slice::from_raw_parts(src, size), size > 1) {
+      (value, true) => match DICTIONARY.get(value) {
+        Some(translate) => {
+          let (ptr, len, _) = translate.to_owned().into_raw_parts();
+          original!(dst, ptr, len - 1)
+        }
+        _ => original!(dst, src, size),
+      },
+      (_, _) => original!(dst, src, size),
+    }
+  }
+}
+
+#[cfg_attr(target_os = "windows", hook(by_offset))]
+#[cfg_attr(target_os = "linux", hook(bypass))]
+fn std_string_ctor(dst: *const u8, src: *const u8, size: usize) -> *const u8 {
   unsafe {
     match (std::slice::from_raw_parts(src, size), size > 1) {
       (value, true) => match DICTIONARY.get(value) {
