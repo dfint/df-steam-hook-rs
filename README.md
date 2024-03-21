@@ -13,7 +13,11 @@ Implemented:
 - translation hooks
 - text entry hooks (e.g. search)
 
-## Build and run
+## Installation
+
+The recommended way of installation is using of the [installer](https://github.com/dfint/installer). It will install the hook, all needed configs, font, etc.
+
+## Manual build
 
 ### Install rustc, toolchain by using rustup
 
