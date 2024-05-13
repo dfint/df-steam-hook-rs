@@ -20,7 +20,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2022-11-06
+          toolchain: nightly
 
       - uses: Swatinem/rust-cache@v2
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Build
         shell: bash
-        run: HOOK_VERSION=${{ github.sha }} cargo +nightly-2022-11-06 build --release
+        run: HOOK_VERSION=${{ github.sha }} cargo build --release
 
       - name: Upload artifact (windows)
         uses: actions/upload-artifact@v4
