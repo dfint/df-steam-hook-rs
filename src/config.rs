@@ -11,6 +11,7 @@ use crate::{
 #[static_init::dynamic]
 pub static CONFIG: Config = Config::new();
 
+#[allow(dead_code)]
 pub struct Config {
   pub metadata: ConfigMetadata,
   pub settings: Settings,
@@ -55,6 +56,7 @@ pub struct OffsetsMetadata {
   pub checksum: u32,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct OffsetsValues {
   pub string_copy_n: Option<usize>,
@@ -72,6 +74,7 @@ pub struct OffsetsValues {
   pub utf_input: Option<usize>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct SymbolsValues {
   pub addst: Option<Vec<String>>,

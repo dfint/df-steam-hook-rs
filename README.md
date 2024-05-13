@@ -23,48 +23,55 @@ The recommended way of installation is using of the [installer](https://github.c
 
 For installation of rust and cargo [see the link](https://doc.rust-lang.org/cargo/getting-started/installation.html).
 
-> [!NOTE]  
+> [!NOTE]
 > The use of system `rustc` and `cargo` often leads to build errors.
 
 On Linux, after the installation use the following command:
+
 ```
 source "$HOME/.cargo/env"
 ```
+
 There's no `source` command on Windows, just install `rustup`, it will add cargo to the environment variables (follow the instructions at the link at the beginning of this section).
 
-Then install `nightly-2022-11-06` toolchain using `rustup`:
+Then install latest `nightly` toolchain using `rustup`:
 
 ```shell
-rustup install nightly-2022-11-06
+rustup install nightly
 ```
 
 ### Build
 
 ```shell
-cargo +nightly-2022-11-06 build --release
+cargo build --release
 ```
 
 ### Prepare the game
 
 Copy:
-* `target/release/libdfint_hook.so` to `libdfhooks.so` in the game's directory on Linux
-* or `target/release/dfint_hook.dll` to `dfhooks.dll` on Windows
-* [font](https://github.com/dfint/update-data/tree/main/store/fonts) to `data/art/curses_640x300.png`
-* [encoding](https://github.com/dfint/update-data/tree/main/store/encodings) to `dfint-data/encoding.toml`
-* [offsets](https://github.com/dfint/update-data/tree/main/store/offsets) to `dfint-data/offsets.toml`
-* [dictionary](https://github.com/dfint/autobuild/tree/main/translation_build/csv/) to `dfint-data/dictionary.csv`
-* [config](https://github.com/dfint/update-data/blob/main/store/config.toml) to `dfint-data/config.toml`
+
+- `target/release/libdfint_hook.so` to `libdfhooks.so` in the game's directory on Linux
+- or `target/release/dfint_hook.dll` to `dfhooks.dll` on Windows
+- [font](https://github.com/dfint/update-data/tree/main/store/fonts) to `data/art/curses_640x300.png`
+- [encoding](https://github.com/dfint/update-data/tree/main/store/encodings) to `dfint-data/encoding.toml`
+- [offsets](https://github.com/dfint/update-data/tree/main/store/offsets) to `dfint-data/offsets.toml`
+- [dictionary](https://github.com/dfint/autobuild/tree/main/translation_build/csv/) to `dfint-data/dictionary.csv`
+- [config](https://github.com/dfint/update-data/blob/main/store/config.toml) to `dfint-data/config.toml`
 
 ### Launch
 
 Run (on Linux)
+
 ```shell
 ./dwarfort
 ```
+
 or (on Windows)
+
 ```shell
 Dwarf Fortress.exe
 ```
+
 or just double click the executable file of the game (or run it from the steam client, for example).
 
 By default, the log is written to the file: `dfint-data/dfint-log.log`
