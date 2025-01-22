@@ -63,7 +63,7 @@ Copy:
 Run (on Linux)
 
 ```shell
-./dwarfort
+./run_df
 ```
 
 or (on Windows)
