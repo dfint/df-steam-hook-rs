@@ -284,17 +284,29 @@ fn standardstringentry(src: *const u8, maxlen: usize, flag: u8, events_ptr: *con
       );
     }
 
+    let content = CxxString::from_ptr(src);
+    let mut any_valid = false;
+
     for i in 0..8 {
+      if utf_a[i] == 0 || utf_a[i] == 10 || content.size() >= maxlen {
+        break;
+      }
+
       if utf_a[i] > 122 && CONFIG.encoding.utf.contains_key(&utf_a[i]) {
         let entry = CONFIG.encoding.utf[&utf_a[i]];
         utf_a[i] = match (flag & StringEntry::CAPS) > 0 {
           true => capitalize(entry),
           false => entry,
         } as u32;
+
+        if content.size() < maxlen {
+          content.push_back(utf_a[i] as u8);
+          any_valid = true;
+        }
       }
     }
 
-    original!(src, maxlen, flag, events_ptr, utf_a.as_ptr())
+    any_valid || original!(content.as_ptr(), maxlen, flag, events_ptr, utf_a.as_ptr())
   }
 }
 

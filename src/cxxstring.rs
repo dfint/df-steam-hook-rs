@@ -38,37 +38,30 @@ impl CxxString {
     }
   }
 
-  // TODO: maybe wrong, not tested
   pub unsafe fn resize(&mut self, size: usize) {
     if size > self.len {
-      match (size >= 16, self.len) {
-        (true, v) if v < 16 => {
-          let new_array = alloc_zeroed(Layout::array::<u8>(32).unwrap());
+      if size >= 16 {
+        // FIXME: magic number here 32^8 - all 8 chars are spaces
+        // if capa is to big, then we assume it is not actual capa but buffer value from stack
+        // so this logic branch should be first allocation
+        if self.len < 16 && self.sso.capa > 1099511627775 {
+          let new_array = alloc_zeroed(Layout::array::<u8>(30).unwrap());
           std::ptr::copy_nonoverlapping(self.sso.buf.as_ptr(), new_array, 16);
           self.ptr = new_array;
-          self.sso.capa = 32;
+          self.sso.capa = 30;
+        } else if self.len >= 16 && size > self.sso.capa {
+          let new_size = self.sso.capa * 2;
+          self.ptr = realloc(self.ptr, Layout::array::<u8>(self.sso.capa).unwrap(), new_size);
+          self.sso.capa = new_size;
         }
-        (true, v) if v >= 16 && size > self.sso.capa => {
-          self.ptr = realloc(
-            self.ptr,
-            Layout::array::<u8>(self.sso.capa).unwrap(),
-            self.sso.capa + 16,
-          );
-          self.sso.capa += 16;
-        }
-        (_, _) => (),
       }
     } else {
-      match (size >= 16, self.len) {
-        (true, _) => {
-          let target = self.ptr as usize + size;
-          let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
-          slice[0] = 0;
-        }
-        (false, v) if v >= 16 => {
-          std::ptr::copy_nonoverlapping(self.ptr, self.sso.buf.as_mut_ptr(), 16);
-        }
-        (_, _) => {}
+      if self.sso.capa >= 16 {
+        let target = self.ptr as usize + size;
+        let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
+        slice[0] = 0;
+      } else {
+        self.sso.buf[size] = 0;
       }
     }
     self.len = size;
@@ -124,7 +117,7 @@ impl Index<usize> for CxxString {
   fn index(&self, index: usize) -> &Self::Output {
     unsafe {
       let mut data: *const u8 = self.sso.buf.as_ptr();
-      if self.len >= 16 {
+      if self.sso.capa >= 16 {
         data = self.ptr;
       }
       let target = data as usize + index;
@@ -139,7 +132,7 @@ impl IndexMut<usize> for CxxString {
   fn index_mut(&mut self, index: usize) -> &mut Self::Output {
     unsafe {
       let mut data: *mut u8 = self.sso.buf.as_mut_ptr();
-      if self.len >= 16 {
+      if self.sso.capa >= 16 {
         data = self.ptr;
       }
       let target = data as usize + index;
