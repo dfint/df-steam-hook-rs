@@ -23,6 +23,9 @@ use crate::dictionary::DICTIONARY;
 #[no_mangle]
 extern "C" fn attach() {
   std::env::set_var("RUST_BACKTRACE", "1");
+  if std::fs::exists(&CONFIG.settings.log_file).unwrap() {
+    std::fs::remove_file(&CONFIG.settings.log_file).expect("unable to remove log file");
+  }
   simple_logging::log_to_file(&CONFIG.settings.log_file, utils::log_level(CONFIG.settings.log_level)).unwrap();
   if CONFIG.metadata.name != "dfint localization hook" {
     error!("unable to find config file");

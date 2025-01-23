@@ -43,7 +43,7 @@ pub enum MessageIconType {
   Info = 0x40,
 }
 
-#[allow(temporary_cstring_as_ptr)]
+#[allow(dangling_pointers_from_temporaries)]
 pub fn message_box(title: &str, text: &str, icon: MessageIconType) {
   let ret = SDL_MESSAGE_BOX(
     icon as u32,
