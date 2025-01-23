@@ -39,12 +39,14 @@ impl CxxString {
   }
 
   pub unsafe fn resize(&mut self, size: usize) {
+    const MAGIC_CAPA: usize = 1099511627775;
+
     if size > self.len {
       if size >= 16 {
         // FIXME: magic number here 32^8 - all 8 chars are spaces
         // if capa is to big, then we assume it is not actual capa but buffer value from stack
         // so this logic branch should be first allocation
-        if self.len < 16 && self.sso.capa > 1099511627775 {
+        if self.len < 16 && self.sso.capa > MAGIC_CAPA {
           let new_array = alloc_zeroed(Layout::array::<u8>(30).unwrap());
           std::ptr::copy_nonoverlapping(self.sso.buf.as_ptr(), new_array, 16);
           self.ptr = new_array;
@@ -56,7 +58,8 @@ impl CxxString {
         }
       }
     } else {
-      if self.sso.capa >= 16 {
+      // TODO: not tested, not use in 0.2.1
+      if self.sso.capa >= 16 && self.sso.capa < MAGIC_CAPA {
         let target = self.ptr as usize + size;
         let slice = std::slice::from_raw_parts_mut(target as *mut u8, 1);
         slice[0] = 0;
