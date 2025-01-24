@@ -71,11 +71,24 @@ jobs:
           mv release/dfint_hook.dll release/hook_${{ env.VERSION }}.dll
           mv release/libdfint_hook.so release/hook_${{ env.VERSION }}.so
 
+      - name: Attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'release/*'
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.VERSION }}
+          draft: true
+          generate_release_notes: true
           files: |
             release/hook_${{ env.VERSION }}.dll
             release/hook_${{ env.VERSION }}.so
-          tag_name: ${{ env.VERSION }}
-          draft: true
+
+      - name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          files: |
+            ./release/*
