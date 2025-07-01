@@ -226,9 +226,9 @@ dependencies = [
 
 [[package]]
 name = "device_query"
-version = "3.0.1"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "429b683ad2cf0d2f0f37f510655854baf18d5f108c3790ab5dd1d09a26874436"
+checksum = "6e28e58ca6323d7f745152b966ddf4d0af4ae8b1b3dfdb6bc8d03f0e6458ff86"
 dependencies = [
  "macos-accessibility-client",
  "pkg-config",
