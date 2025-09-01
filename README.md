@@ -1,6 +1,8 @@
 # df-steam-hook-rs
 
 [![Build](https://github.com/dfint/df-steam-hook-rs/actions/workflows/build.yml/badge.svg)](https://github.com/dfint/df-steam-hook-rs/actions/workflows/build.yml)
+[![Total downloads of all releases](https://img.shields.io/github/downloads/dfint/df-steam-hook-rs/total)](https://github.com/dfint/df-steam-hook-rs/releases)
+[![Downloads of the latest release](https://img.shields.io/github/downloads/dfint/df-steam-hook-rs/latest/total)](https://github.com/dfint/df-steam-hook-rs/releases/latest)
 
 Re-implementation of [df-steam-hook](https://github.com/dfint/df-steam-hook) in Rust.
 
