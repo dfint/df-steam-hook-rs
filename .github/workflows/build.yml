@@ -2,7 +2,7 @@ name: Build
 
 on:
   workflow_dispatch:
-  
+
   push:
     branches: ["main"]
     paths:
@@ -20,6 +20,8 @@ on:
       - "rust-toolchain.toml"
       - "src/**"
       - ".github/workflows/build.yml"
+
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
