@@ -47,7 +47,8 @@ jobs:
           sudo apt install libxtst-dev
 
       - name: Build
-        run: cargo build --release
+        shell: bash
+        run: HOOK_VERSION=${{ github.sha }} cargo build --release
 
       - name: Upload artifact (win)
         uses: actions/upload-artifact@v4
