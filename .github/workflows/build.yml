@@ -51,14 +51,14 @@ jobs:
         run: HOOK_VERSION=${{ github.sha }} cargo build --release
 
       - name: Upload artifact (win)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: matrix.os == 'windows-latest'
         with:
           name: dfint_hook.dll
           path: ./target/release/dfint_hook.dll
 
       - name: Upload artifact (linux)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: matrix.os == 'ubuntu-latest'
         with:
           name: libdfint_hook.so
