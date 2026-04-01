@@ -14,7 +14,7 @@ retour = { version = "0.3.1", features = ["static-detour"] }
 log = "0.4.29"
 simple-logging = "2.0.2"
 regex = "1.12.3"
-toml = "1.0.3"
+toml = "1.1.1"
 backtrace = "0.3.76"
 chrono = "0.4.44"
 serde_derive = "1.0.201"
